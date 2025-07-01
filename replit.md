@@ -90,6 +90,12 @@ The application follows a simple server-based architecture:
 
 ## Recent Changes
 
+- **July 1, 2025**: Fixed vector store ID configuration issue
+  - Resolved empty VECTOR_STORE_ID causing server initialization problems
+  - Added fallback logic to use default vector store when environment variable is empty
+  - Server now properly initializes with vs_682552f3ab90819185d4b99adcae7a07
+  - MCP server running successfully on port 8000 with proper vector store connection
+
 - **June 24, 2025**: Fixed deployment port configuration and URL formatting
   - Updated server port from 5000 back to 8000 to match deployment requirements
   - Reconfigured workflow to expect port 8000 instead of 5000
@@ -97,7 +103,6 @@ The application follows a simple server-based architecture:
   - Fixed search function URL formatting to match fetch function format
   - Both search and fetch now return proper OpenAI platform URLs for citations
   - Server now properly configured for Autoscale deployments on port 8000
-  - MCP server successfully running and ready for deployment
 
 ## Changelog
 
