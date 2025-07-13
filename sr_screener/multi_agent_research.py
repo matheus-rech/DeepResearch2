@@ -223,6 +223,9 @@ class MultiAgentScreener:
             input=screening_prompt,
             tools=[
                 {
+                    "type": "web_search_preview"  # Required for Deep Research
+                },
+                {
                     "type": "mcp",
                     "server": {
                         "url": self.mcp_url
@@ -241,9 +244,19 @@ class MultiAgentScreener:
             status_response = await client.responses.retrieve(job_id)
             
             if status_response.status == "completed":
-                # Extract content from response
-                if status_response.output_text:
+                # Extract content from response according to documentation
+                content = None
+                
+                # Try the documented format first
+                if hasattr(status_response, 'output') and status_response.output:
+                    final_output = status_response.output[-1]
+                    if hasattr(final_output, 'content') and final_output.content:
+                        content = final_output.content[0].text
+                # Fallback to output_text if available
+                elif hasattr(status_response, 'output_text') and status_response.output_text:
                     content = status_response.output_text
+                
+                if content:
                     # Parse JSON results
                     try:
                         import re

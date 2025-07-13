@@ -254,6 +254,20 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Fixed Deep Research API Implementation Based on Official Documentation
+  - **Issue**: Deep Research API calls were failing with parameter and response parsing errors
+  - **Documentation Review**: Analyzed official OpenAI Deep Research API documentation and cookbook examples
+  - **Fixes Applied**:
+    1. **Removed unsupported parameter**: Removed `max_tool_calls` from both `deep_research.py` and `multi_agent_research.py` (parameter mentioned in docs but not yet supported)
+    2. **Fixed response parsing**: Updated polling functions to handle multiple response formats:
+       - Primary: `response.output[-1].content[0].text` (documented format)
+       - Fallback 1: `response.message.content[0].text` (legacy format)
+       - Fallback 2: `response.output_text` (platform docs format)
+    3. **Added required tool**: Added `web_search_preview` tool alongside MCP tool (Deep Research requires at least one data source)
+  - **Response Structure**: Deep Research responses include intermediate steps (web searches, reasoning, MCP calls) in the `output` array, with the final answer as the last element
+  - **Background Mode**: Correctly implemented async polling for background mode jobs
+  - **Compatibility**: Code now handles multiple response formats to ensure robustness across API versions
+
 - **July 13, 2025**: Implemented Native PubMed Export Formats
   - **New Feature**: Added comprehensive PubMed-compatible export functionality
   - **Export Formats Supported**:

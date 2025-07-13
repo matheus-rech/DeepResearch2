@@ -106,6 +106,9 @@ Document your reasoning clearly for transparency and potential appeals."""
             input=task,  # Deep Research expects a simple string input
             tools=[
                 {
+                    "type": "web_search_preview"  # Required for Deep Research
+                },
+                {
                     "type": "mcp",
                     "server": {
                         "url": mcp_url
@@ -139,8 +142,23 @@ def poll_job_status(job_id: str, sleep_interval: int = 5) -> Dict[str, Any]:
             response = client.responses.retrieve(job_id)
             
             if response.status == "completed":
-                # Extract the content
-                if response.message and response.message.content:
+                # Extract the content according to documentation
+                # The final answer is in response.output[-1].content[0].text
+                if hasattr(response, 'output') and response.output:
+                    # Get the last output item (the final answer)
+                    final_output = response.output[-1]
+                    if hasattr(final_output, 'content') and final_output.content:
+                        content = final_output.content[0].text
+                        return {
+                            "status": "completed",
+                            "content": content,
+                            "reasoning": getattr(response, "reasoning", {}),
+                            "full_output": response.output  # Keep full output for debugging
+                        }
+                    else:
+                        raise ValueError("Completed job has no content in final output")
+                # Fallback to old format if needed
+                elif hasattr(response, 'message') and response.message and response.message.content:
                     content = response.message.content[0].text
                     return {
                         "status": "completed",
@@ -148,6 +166,13 @@ def poll_job_status(job_id: str, sleep_interval: int = 5) -> Dict[str, Any]:
                         "reasoning": getattr(response, "reasoning", {})
                     }
                 else:
+                    # Try output_text as shown in platform docs
+                    if hasattr(response, 'output_text') and response.output_text:
+                        return {
+                            "status": "completed",
+                            "content": response.output_text,
+                            "reasoning": getattr(response, "reasoning", {})
+                        }
                     raise ValueError("Completed job has no content")
                     
             elif response.status == "failed":
