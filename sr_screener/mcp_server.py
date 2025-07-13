@@ -36,7 +36,7 @@ def create_server():
     mcp = FastMCP("Systematic Review MCP Server", instructions=server_instructions)
     
     @mcp.tool()
-    async def search(query: str, limit: int = 100) -> Dict[str, List[Dict[str, Any]]]:
+    async def search(query: str, limit: int = 10000) -> Dict[str, List[Dict[str, Any]]]:
         """
         Search for citations in the systematic review corpus.
         
@@ -48,15 +48,20 @@ def create_server():
             query: Search query string. Natural language queries work best.
                    Examples: "randomized controlled trials diabetes", 
                             "spinal cord injury rehabilitation"
-            limit: Maximum number of results to return (default: 100)
+            limit: Maximum number of results to return (default: 10000 to ensure all citations available)
         
         Returns:
             Dictionary with 'results' key containing list of matching citations.
-            Each result includes id, title, snippet, year, journal, and relevance score.
+            Each result includes id, title, text snippet, and url per Deep Research spec.
         """
         try:
             # Get search results
-            results = db.search_citations(query, limit)
+            # Special case: empty query or "*" returns all citations
+            if not query.strip() or query.strip() == "*":
+                # Return all citations for comprehensive screening
+                results = db.get_all_citations(limit)
+            else:
+                results = db.search_citations(query, limit)
             
             # Format results for MCP - must comply with Deep Research spec
             formatted_results = []

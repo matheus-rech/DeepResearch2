@@ -163,10 +163,12 @@ def bulk_insert_citations(df: pd.DataFrame):
         return stats
 
 
-def search_citations(query: str, limit: int = 100) -> List[Dict[str, Any]]:
+def search_citations(query: str, limit: int = 10000) -> List[Dict[str, Any]]:
     """
     Search citations using full-text search.
     Returns list of matching citations with snippets.
+    
+    Note: Default limit increased to 10000 to ensure all citations can be screened.
     """
     with get_db() as db:
         if 'postgresql' in str(engine.url):
@@ -247,6 +249,38 @@ def fetch_citation(citation_id: str) -> Optional[Dict[str, Any]]:
             "raw_data": citation.raw_data,
             "created_at": citation.created_at.isoformat() if citation.created_at else None
         }
+
+
+def get_all_citations(limit: int = 10000) -> List[Dict[str, Any]]:
+    """
+    Get all citations from the database (no search filtering).
+    Used for comprehensive systematic review screening.
+    
+    Args:
+        limit: Maximum number of citations to return (default: 10000)
+        
+    Returns:
+        List of all citations with basic metadata
+    """
+    with get_db() as db:
+        results = db.query(Citation).limit(limit).all()
+        
+        citations = []
+        for citation in results:
+            citations.append({
+                "id": citation.id,
+                "title": citation.title,
+                "abstract": citation.abstract,
+                "abstract_snippet": citation.abstract[:200] + "..." if citation.abstract and len(citation.abstract) > 200 else citation.abstract,
+                "year": citation.year,
+                "journal": citation.journal,
+                "doi": citation.doi,
+                "authors": json.loads(citation.authors) if citation.authors else [],
+                "mesh_terms": json.loads(citation.mesh_terms) if citation.mesh_terms else [],
+                "keywords": json.loads(citation.keywords) if citation.keywords else []
+            })
+        
+        return citations
 
 
 def get_corpus_stats() -> Dict[str, Any]:

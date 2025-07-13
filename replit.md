@@ -55,10 +55,14 @@ The application supports two distinct modes:
 #### 1. SR MCP Server (`sr_screener/mcp_server.py`)
 - **Purpose**: MCP server for citation corpus search/fetch
 - **Tools**:
-  - `search()`: Full-text search in citation database
+  - `search()`: Full-text search in citation database (limit: 10,000 citations)
   - `fetch()`: Retrieve complete citation with metadata
   - `corpus_info()`: Get corpus statistics
 - **Database**: PostgreSQL with full-text search
+- **Search Strategy**: 
+  - Uses PostgreSQL full-text search (NOT vector embeddings)
+  - Empty query or "*" returns ALL citations for comprehensive screening
+  - No artificial limits on screening - processes entire corpus
 
 #### 2. Citation Parsers (`sr_screener/parsers.py`)
 - **Purpose**: Parse various citation formats
