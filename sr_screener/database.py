@@ -100,48 +100,65 @@ def bulk_insert_citations(df: pd.DataFrame):
     stats = {"inserted": 0, "updated": 0, "skipped": 0, "total": len(df)}
     
     with get_db() as db:
+        # Get all existing citation IDs to avoid duplicate queries
+        existing_ids = set()
+        try:
+            existing_citations = db.query(Citation.id).all()
+            existing_ids = {citation.id for citation in existing_citations}
+        except Exception as e:
+            logger.warning(f"Could not fetch existing citation IDs: {e}")
+        
         for _, row in df.iterrows():
             try:
                 citation_id = str(row.get('id', ''))
+                if not citation_id:
+                    logger.warning("Skipping row with empty ID")
+                    stats["skipped"] += 1
+                    continue
                 
-                # Check if citation already exists
-                existing = db.query(Citation).filter(Citation.id == citation_id).first()
+                # Prepare citation data
+                citation_data = {
+                    'title': str(row.get('title', '')),
+                    'abstract': str(row.get('abstract', '')),
+                    'year': int(row.get('year')) if pd.notna(row.get('year')) else None,
+                    'authors': json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
+                    'journal': str(row.get('journal', '')),
+                    'doi': str(row.get('doi', '')),
+                    'mesh_terms': json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', '')),
+                    'keywords': json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', '')),
+                    'raw_data': row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
+                }
                 
-                if existing:
+                if citation_id in existing_ids:
                     # Update existing citation
-                    existing.title = str(row.get('title', ''))
-                    existing.abstract = str(row.get('abstract', ''))
-                    existing.year = int(row.get('year')) if pd.notna(row.get('year')) else None
-                    existing.authors = json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', ''))
-                    existing.journal = str(row.get('journal', ''))
-                    existing.doi = str(row.get('doi', ''))
-                    existing.mesh_terms = json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', ''))
-                    existing.keywords = json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', ''))
-                    existing.raw_data = row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
-                    stats["updated"] += 1
+                    try:
+                        db.query(Citation).filter(Citation.id == citation_id).update(citation_data)
+                        stats["updated"] += 1
+                    except Exception as e:
+                        logger.error(f"Error updating citation {citation_id}: {str(e)}")
+                        stats["skipped"] += 1
                 else:
                     # Insert new citation
-                    citation = Citation(
-                        id=citation_id,
-                        title=str(row.get('title', '')),
-                        abstract=str(row.get('abstract', '')),
-                        year=int(row.get('year')) if pd.notna(row.get('year')) else None,
-                        authors=json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
-                        journal=str(row.get('journal', '')),
-                        doi=str(row.get('doi', '')),
-                        mesh_terms=json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', '')),
-                        keywords=json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', '')),
-                        raw_data=row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
-                    )
-                    db.add(citation)
-                    stats["inserted"] += 1
-                    
+                    try:
+                        citation = Citation(id=citation_id, **citation_data)
+                        db.add(citation)
+                        existing_ids.add(citation_id)  # Add to our local set
+                        stats["inserted"] += 1
+                    except Exception as e:
+                        logger.error(f"Error inserting citation {citation_id}: {str(e)}")
+                        stats["skipped"] += 1
+                        
             except Exception as e:
                 logger.error(f"Error processing citation {row.get('id', 'unknown')}: {str(e)}")
                 stats["skipped"] += 1
                 continue
         
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            logger.error(f"Error committing changes: {str(e)}")
+            db.rollback()
+            raise
         
         return stats
 
