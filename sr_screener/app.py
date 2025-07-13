@@ -144,9 +144,15 @@ def show_upload_step():
                         # Save to database
                         with st.spinner("Loading into database..."):
                             db.init_db()
-                            count = db.bulk_insert_citations(df)
+                            stats = db.bulk_insert_citations(df)
                         
-                        st.success(f"✅ Loaded {count} citations into database!")
+                        # Show detailed results
+                        if stats['inserted'] > 0:
+                            st.success(f"✅ Added {stats['inserted']} new citations!")
+                        if stats['updated'] > 0:
+                            st.info(f"📝 Updated {stats['updated']} existing citations")
+                        if stats['skipped'] > 0:
+                            st.warning(f"⚠️ Skipped {stats['skipped']} citations due to errors")
                         st.session_state.citations_loaded = True
                         st.session_state.current_step = "criteria"
                         st.rerun()
@@ -156,13 +162,32 @@ def show_upload_step():
                         st.exception(e)
     
     # Option to skip if citations already loaded
-    if db.get_corpus_stats()["total_citations"] > 0:
+    corpus_stats = db.get_corpus_stats()
+    if corpus_stats["total_citations"] > 0:
         st.divider()
-        st.info(f"ℹ️ Database already contains {db.get_corpus_stats()['total_citations']} citations")
-        if st.button("Continue with existing corpus →"):
-            st.session_state.citations_loaded = True
-            st.session_state.current_step = "criteria"
-            st.rerun()
+        st.info(f"ℹ️ Database already contains {corpus_stats['total_citations']} citations")
+        
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            if st.button("Continue with existing corpus →", use_container_width=True):
+                st.session_state.citations_loaded = True
+                st.session_state.current_step = "criteria"
+                st.rerun()
+        
+        with col2:
+            if st.button("Add to existing corpus", use_container_width=True):
+                st.info("Upload a file above to add more citations")
+        
+        with col3:
+            if st.button("🗑️ Clear all", type="secondary", use_container_width=True):
+                if st.session_state.get('confirm_clear', False):
+                    count = db.clear_all_citations()
+                    st.success(f"Cleared {count} citations from database")
+                    st.session_state.confirm_clear = False
+                    st.rerun()
+                else:
+                    st.session_state.confirm_clear = True
+                    st.warning("Click again to confirm clearing all citations")
 
 
 def show_criteria_step():

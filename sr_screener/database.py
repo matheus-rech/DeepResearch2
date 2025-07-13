@@ -3,6 +3,7 @@ Database module for systematic review screener
 Uses PostgreSQL with full-text search capabilities
 """
 import json
+import logging
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -13,6 +14,8 @@ from sqlalchemy import create_engine, text, Column, String, Text, Integer, DateT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
+
+logger = logging.getLogger(__name__)
 
 # Database configuration
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -87,36 +90,60 @@ def init_db():
 
 def bulk_insert_citations(df: pd.DataFrame):
     """
-    Bulk insert citations from DataFrame.
+    Bulk insert citations from DataFrame, handling duplicates gracefully.
     Expected columns: id, title, abstract, year, authors, journal, doi, 
                      mesh_terms, keywords, raw_data
+    
+    Returns:
+        Dict with counts of inserted, updated, and skipped citations
     """
+    stats = {"inserted": 0, "updated": 0, "skipped": 0, "total": len(df)}
+    
     with get_db() as db:
-        # Clear existing citations
-        db.query(Citation).delete()
-        
-        # Prepare citations for insertion
-        citations = []
         for _, row in df.iterrows():
-            citation = Citation(
-                id=str(row.get('id', '')),
-                title=str(row.get('title', '')),
-                abstract=str(row.get('abstract', '')),
-                year=int(row.get('year')) if pd.notna(row.get('year')) else None,
-                authors=json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
-                journal=str(row.get('journal', '')),
-                doi=str(row.get('doi', '')),
-                mesh_terms=json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', '')),
-                keywords=json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', '')),
-                raw_data=row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
-            )
-            citations.append(citation)
+            try:
+                citation_id = str(row.get('id', ''))
+                
+                # Check if citation already exists
+                existing = db.query(Citation).filter(Citation.id == citation_id).first()
+                
+                if existing:
+                    # Update existing citation
+                    existing.title = str(row.get('title', ''))
+                    existing.abstract = str(row.get('abstract', ''))
+                    existing.year = int(row.get('year')) if pd.notna(row.get('year')) else None
+                    existing.authors = json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', ''))
+                    existing.journal = str(row.get('journal', ''))
+                    existing.doi = str(row.get('doi', ''))
+                    existing.mesh_terms = json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', ''))
+                    existing.keywords = json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', ''))
+                    existing.raw_data = row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
+                    stats["updated"] += 1
+                else:
+                    # Insert new citation
+                    citation = Citation(
+                        id=citation_id,
+                        title=str(row.get('title', '')),
+                        abstract=str(row.get('abstract', '')),
+                        year=int(row.get('year')) if pd.notna(row.get('year')) else None,
+                        authors=json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
+                        journal=str(row.get('journal', '')),
+                        doi=str(row.get('doi', '')),
+                        mesh_terms=json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', '')),
+                        keywords=json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', '')),
+                        raw_data=row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
+                    )
+                    db.add(citation)
+                    stats["inserted"] += 1
+                    
+            except Exception as e:
+                logger.error(f"Error processing citation {row.get('id', 'unknown')}: {str(e)}")
+                stats["skipped"] += 1
+                continue
         
-        # Bulk insert
-        db.bulk_save_objects(citations)
         db.commit()
         
-        return len(citations)
+        return stats
 
 
 def search_citations(query: str, limit: int = 100) -> List[Dict[str, Any]]:
@@ -223,3 +250,12 @@ def get_corpus_stats() -> Dict[str, Any]:
             "total_citations": total,
             "year_distribution": [{"year": row.year, "count": row.count} for row in year_stats]
         }
+
+
+def clear_all_citations():
+    """Clear all citations from the database."""
+    with get_db() as db:
+        count = db.query(Citation).count()
+        db.query(Citation).delete()
+        db.commit()
+        return count
