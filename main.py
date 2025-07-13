@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """
-Sample MCP Server for ChatGPT Deep Research Integration
+MCP Server for ChatGPT Deep Research Integration
 
-This server implements the Model Context Protocol (MCP) with search and fetch
-capabilities designed to work with ChatGPT's deep research feature.
+This server provides two modes:
+1. Vector Store mode - Uses OpenAI Vector Store for document search
+2. Systematic Review mode - Uses local database for citation screening
+
+Run with:
+- python main.py vector     # Vector store mode (default)
+- python main.py sr         # Systematic review mode
+- python main.py sr-ui      # Systematic review with Streamlit UI
 """
 
 import logging
 import os
+import sys
 from typing import Dict, List, Any
 
 from fastmcp import FastMCP
@@ -24,7 +31,7 @@ VECTOR_STORE_ID = os.environ.get("VECTOR_STORE_ID", "vs_682552f3ab90819185d4b99a
 # Initialize OpenAI client
 openai_client = OpenAI()
 
-server_instructions = """
+vector_store_instructions = """
 This MCP server provides search and document retrieval capabilities 
 for deep research. Use the search tool to find relevant documents 
 based on keywords, then use the fetch tool to retrieve complete 
@@ -37,7 +44,7 @@ def create_server():
 
     # Initialize the FastMCP server
     mcp = FastMCP(name="Sample Deep Research MCP Server",
-                  instructions=server_instructions)
+                  instructions=vector_store_instructions)
 
     @mcp.tool()
     async def search(query: str) -> Dict[str, List[Dict[str, Any]]]:
@@ -179,8 +186,8 @@ def create_server():
     return mcp
 
 
-def main():
-    """Main function to start the MCP server."""
+def run_vector_store_mode():
+    """Run the MCP server in vector store mode."""
     # Verify OpenAI client is initialized
     if not openai_client:
         logger.error(
@@ -205,6 +212,59 @@ def main():
     except Exception as e:
         logger.error(f"Server error: {e}")
         raise
+
+
+def run_systematic_review_mode():
+    """Run the MCP server in systematic review mode."""
+    logger.info("Starting Systematic Review MCP Server")
+    sys.path.insert(0, 'sr_screener')
+    
+    try:
+        import sr_screener.mcp_server as sr_mcp
+        sr_mcp.main()
+    except ImportError as e:
+        logger.error(f"Failed to import systematic review module: {e}")
+        logger.error("Make sure you're running from the project root directory")
+        raise
+
+
+def run_systematic_review_ui():
+    """Run the systematic review mode with Streamlit UI."""
+    logger.info("Starting Systematic Review with UI")
+    sys.path.insert(0, 'sr_screener')
+    
+    try:
+        import sr_screener.main as sr_main
+        sr_main.run_both()
+    except ImportError as e:
+        logger.error(f"Failed to import systematic review module: {e}")
+        logger.error("Make sure you're running from the project root directory")
+        raise
+
+
+def main():
+    """Main function to handle command-line arguments and run the appropriate mode."""
+    mode = "vector"  # Default mode
+    
+    if len(sys.argv) > 1:
+        mode = sys.argv[1].lower()
+    
+    if mode == "vector":
+        logger.info("Running in Vector Store mode")
+        run_vector_store_mode()
+    elif mode == "sr":
+        logger.info("Running in Systematic Review mode (MCP server only)")
+        run_systematic_review_mode()
+    elif mode == "sr-ui":
+        logger.info("Running in Systematic Review mode with UI")
+        run_systematic_review_ui()
+    else:
+        print(f"Unknown mode: {mode}")
+        print("\nUsage:")
+        print("  python main.py vector    # Vector store mode (default)")
+        print("  python main.py sr        # Systematic review MCP server")
+        print("  python main.py sr-ui     # Systematic review with Streamlit UI")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

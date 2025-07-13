@@ -2,60 +2,156 @@
 
 ## Overview
 
-This is a sample Model Context Protocol (MCP) server designed to integrate with ChatGPT's Deep Research feature. The application provides search and document retrieval capabilities for a knowledge base through a FastMCP server implementation. It serves as a reference implementation for building custom MCP servers that can extend ChatGPT with company-specific knowledge and tools.
+This is a dual-mode MCP server designed to integrate with ChatGPT's Deep Research feature:
+
+1. **Vector Store Mode**: Uses OpenAI Vector Store for document search and retrieval
+2. **Systematic Review Mode**: A comprehensive citation screening tool for academic research with Streamlit UI
+
+The application provides search and document retrieval capabilities through FastMCP server implementation. It serves as a reference implementation for building custom MCP servers that can extend ChatGPT with specialized research tools.
 
 ## System Architecture
 
-The application follows a simple server-based architecture:
+The application supports two distinct modes:
 
+### Vector Store Mode (Original)
 - **Backend Framework**: FastMCP (Model Context Protocol implementation)
 - **Runtime**: Python 3.11 with uvicorn ASGI server
 - **Transport**: Server-Sent Events (SSE) for real-time communication
-- **Data Storage**: In-memory storage with JSON file loading
-- **Deployment**: Single-process server running on port 8000
+- **Data Storage**: OpenAI Vector Store integration
+- **Port**: 8000 (MCP server)
+
+### Systematic Review Mode (New)
+- **Backend Framework**: FastMCP for MCP server + Streamlit for UI
+- **Database**: PostgreSQL with full-text search (FTS) capabilities
+- **File Parsing**: Supports PubMed XML, RIS, CSV, EndNote XML formats
+- **Deep Research Integration**: Uses OpenAI o3-deep-research model
+- **ICE System**: Internal Consistency Evaluation for quality control
+- **Ports**: 8000 (MCP server) + 8501 (Streamlit UI)
 
 ## Key Components
 
-### 1. MCP Server (`main.py`)
-- **Purpose**: Main application entry point implementing MCP protocol
+### Common Components
+
+#### 1. Main Entry Point (`main.py`)
+- **Purpose**: Unified entry point supporting both modes
+- **Modes**: 
+  - `python main.py vector` - Vector store mode
+  - `python main.py sr` - Systematic review MCP server only
+  - `python main.py sr-ui` - Systematic review with Streamlit UI
+- **Architecture Decision**: Single entry point for flexibility
+- **Rationale**: Allows easy switching between modes
+
+### Vector Store Mode Components
+
+#### 1. Vector Store Server (`main.py` - vector mode)
+- **Purpose**: MCP server using OpenAI Vector Store
 - **Key Functions**:
-  - `load_sample_data()`: Loads documents from JSON file into memory
-  - `create_server()`: Configures FastMCP server with tools
-- **Architecture Decision**: Uses FastMCP library for simplified MCP implementation
-- **Rationale**: FastMCP abstracts away protocol complexity while maintaining full MCP compatibility
+  - `search()`: Semantic search in vector store
+  - `fetch()`: Retrieve complete documents by ID
+- **Integration**: Direct OpenAI Vector Store API
 
-### 2. Sample Data (`sample_data.json`)
-- **Purpose**: Static knowledge base with sample documents
-- **Structure**: Array of document records with metadata
-- **Fields**: id, title, text, content, url, metadata (category, author, date, tags)
-- **Architecture Decision**: JSON file for simple data storage
-- **Rationale**: Demonstrates data structure without database complexity
+### Systematic Review Mode Components
 
-### 3. Configuration Files
-- **`.replit`**: Defines Python 3.11 environment and workflow automation
-- **`pyproject.toml`**: Python project dependencies (fastmcp, uvicorn)
-- **`uv.lock`**: Dependency lock file for reproducible builds
+#### 1. SR MCP Server (`sr_screener/mcp_server.py`)
+- **Purpose**: MCP server for citation corpus search/fetch
+- **Tools**:
+  - `search()`: Full-text search in citation database
+  - `fetch()`: Retrieve complete citation with metadata
+  - `corpus_info()`: Get corpus statistics
+- **Database**: PostgreSQL with full-text search
+
+#### 2. Citation Parsers (`sr_screener/parsers.py`)
+- **Purpose**: Parse various citation formats
+- **Supported Formats**:
+  - PubMed XML (.xml)
+  - RIS format (.ris) - EndNote, Mendeley exports
+  - CSV format (.csv)
+  - EndNote XML (.xml)
+- **Auto-detection**: Automatically detects format
+
+#### 3. Database Layer (`sr_screener/database.py`)
+- **Purpose**: PostgreSQL database operations
+- **Features**:
+  - Full-text search with relevance ranking
+  - Bulk citation insertion
+  - Search result highlighting
+  - Corpus statistics
+
+#### 4. Deep Research Integration (`sr_screener/deep_research.py`)
+- **Purpose**: Integration with OpenAI o3-deep-research
+- **Functions**:
+  - Launch screening jobs with PICO criteria
+  - Poll job status
+  - Parse screening results
+- **Model**: o3-deep-research-2025-06-26
+
+#### 5. Streamlit UI (`sr_screener/app.py`)
+- **Purpose**: Web interface for systematic review workflow
+- **Features**:
+  - Citation file upload
+  - PICO criteria configuration
+  - Inclusion/exclusion criteria setup
+  - Real-time screening progress
+  - Results review and export
+- **Steps**: Upload → Criteria → Screen → Results
+
+#### 6. ICE Critic (`sr_screener/ice_critic.py`)
+- **Purpose**: Internal Consistency Evaluation
+- **Analyses**:
+  - PICO match validation
+  - Confidence vs decision consistency
+  - Duplicate detection
+  - Exclusion reason standardization
+  - Sequence pattern detection
+- **Output**: Severity-ranked issues with suggestions
+
+### Configuration Files
+- **`.replit`**: Python 3.11 environment
+- **`pyproject.toml`**: Core dependencies
+- **`sr_screener/requirements.txt`**: SR-specific dependencies
+- **`sr_screener/.env.example`**: Environment variables template
 
 ## Data Flow
 
+### Vector Store Mode
 1. **Server Startup**: 
-   - Load sample data from JSON file into memory
-   - Create lookup dictionary for fast document retrieval
+   - Connect to OpenAI Vector Store using API key
    - Initialize FastMCP server with search and fetch tools
 
 2. **Search Operations**:
-   - Accept keyword-based search queries
-   - Search across document titles, content, and metadata
-   - Return matching document summaries
+   - Accept natural language queries
+   - Perform semantic search in vector store
+   - Return matching documents with snippets
 
 3. **Fetch Operations**:
-   - Accept document ID requests
-   - Return complete document with full content and metadata
-   - Provide fast retrieval through in-memory lookup
+   - Retrieve complete documents by file ID
+   - Return full content with metadata
+
+### Systematic Review Mode
+1. **Citation Upload (UI)**:
+   - User uploads citation file (PubMed, RIS, CSV, etc.)
+   - Parser auto-detects format and extracts citations
+   - Bulk insert into PostgreSQL database
+
+2. **Criteria Configuration (UI)**:
+   - User defines PICO criteria
+   - Sets inclusion/exclusion criteria
+   - Saves configuration for screening
+
+3. **Screening Process**:
+   - Deep Research agent queries MCP server for citations
+   - Evaluates each citation against criteria
+   - Returns screening decisions with confidence levels
 
 4. **MCP Communication**:
-   - Use Server-Sent Events for real-time communication
-   - Follow MCP protocol for tool invocation and responses
+   - Search tool: Full-text search in citation corpus
+   - Fetch tool: Retrieve complete citation details
+   - Corpus info: Get statistics about loaded citations
+
+5. **Results Review (UI)**:
+   - Display included/excluded citations
+   - Run ICE analysis for quality control
+   - Export results in multiple formats
 
 ## External Dependencies
 
@@ -88,7 +184,65 @@ The application follows a simple server-based architecture:
 - **Cons**: Limited by available memory, data lost on restart
 - **Alternative Considered**: Database storage (would add complexity for sample)
 
+## Usage Instructions
+
+### Running Vector Store Mode
+```bash
+# Default mode - runs MCP server with OpenAI Vector Store
+python main.py vector
+
+# Or simply:
+python main.py
+```
+
+### Running Systematic Review Mode
+
+#### Option 1: MCP Server Only
+```bash
+# Run just the MCP server for systematic review (port 8000)
+python main.py sr
+```
+
+#### Option 2: Full UI Experience (Recommended)
+```bash
+# Run both MCP server and Streamlit UI
+python main.py sr-ui
+
+# Access the UI at: http://localhost:8501
+```
+
+### Systematic Review Workflow
+
+1. **Upload Citations**: 
+   - Access Streamlit UI at http://localhost:8501
+   - Upload your citation export (PubMed XML, RIS, CSV, EndNote XML)
+   - System auto-detects format and loads citations
+
+2. **Configure Criteria**:
+   - Define PICO criteria (Population, Intervention, Comparator, Outcome)
+   - Set inclusion criteria (e.g., RCTs, English language, year range)
+   - Set exclusion criteria (e.g., case reports, animal studies)
+
+3. **Run Screening**:
+   - Click "Start Screening" to launch Deep Research agent
+   - Agent systematically evaluates each citation against criteria
+   - Progress updates shown in real-time
+
+4. **Review Results**:
+   - View included/excluded citations with reasons
+   - Run ICE analysis to check consistency
+   - Export results as JSON, CSV, or PRISMA flow data
+
 ## Recent Changes
+
+- **July 13, 2025**: Added Systematic Review Screener
+  - Created comprehensive citation screening tool with Streamlit UI
+  - Integrated PostgreSQL database with full-text search
+  - Added support for multiple citation formats (PubMed, RIS, CSV, EndNote)
+  - Implemented Deep Research integration for automated screening
+  - Added ICE (Internal Consistency Evaluation) system
+  - Created dual-mode main.py supporting both vector store and SR modes
+  - Added comprehensive documentation and workflow configurations
 
 - **July 1, 2025**: Fixed vector store ID configuration issue
   - Resolved empty VECTOR_STORE_ID causing server initialization problems

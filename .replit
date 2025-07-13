@@ -2,6 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["glibcLocales", "xcodebuild", "zlib"]
 
 [workflows]
 runButton = "Project"
@@ -13,16 +14,16 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "MCP Server"
+args = "SR Screener UI"
 
 [[workflows.workflow]]
-name = "MCP Server"
+name = "SR Screener UI"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install fastmcp uvicorn && python main.py"
-waitForPort = 8000
+args = "python main.py sr-ui"
+waitForPort = 5000
 
 [[ports]]
 localPort = 5000
@@ -31,6 +32,11 @@ externalPort = 5000
 [[ports]]
 localPort = 8000
 externalPort = 80
+exposeLocalhost = true
+
+[[ports]]
+localPort = 8501
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "cloudrun"
