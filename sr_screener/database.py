@@ -143,6 +143,20 @@ def bulk_insert_citations(df: pd.DataFrame):
                 # Check if citation exists
                 existing = db.query(Citation).filter(Citation.id == citation_id).first()
                 
+                # Clean NaN values from raw_data
+                raw_data = row.get('raw_data', {})
+                if isinstance(raw_data, dict):
+                    # Convert NaN to None recursively
+                    raw_data = json.loads(json.dumps(raw_data, default=lambda x: None if pd.isna(x) else x))
+                else:
+                    raw_data = {}
+                
+                # Skip citation if ID is nan or invalid
+                if citation_id.lower() == 'nan' or pd.isna(citation_id):
+                    logger.warning(f"Skipping row with invalid ID: {citation_id}")
+                    stats["skipped"] += 1
+                    continue
+                
                 # Prepare citation data
                 citation_data = {
                     'title': str(row.get('title', '')),
@@ -150,10 +164,10 @@ def bulk_insert_citations(df: pd.DataFrame):
                     'year': int(row.get('year')) if pd.notna(row.get('year')) else None,
                     'authors': json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
                     'journal': str(row.get('journal', '')),
-                    'doi': str(row.get('doi', '')),
+                    'doi': str(row.get('doi', '') if pd.notna(row.get('doi', '')) else ''),
                     'mesh_terms': json.dumps(row.get('mesh_terms', [])) if isinstance(row.get('mesh_terms'), list) else str(row.get('mesh_terms', '')),
                     'keywords': json.dumps(row.get('keywords', [])) if isinstance(row.get('keywords'), list) else str(row.get('keywords', '')),
-                    'raw_data': row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
+                    'raw_data': raw_data
                 }
                 
                 if existing:

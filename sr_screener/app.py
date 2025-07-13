@@ -190,7 +190,7 @@ def show_upload_step():
     corpus_stats = db.get_corpus_stats()
     if corpus_stats["total_citations"] > 0:
         st.divider()
-        st.info(f"ℹ️ Database already contains {corpus_stats['total_citations']} citations")
+        st.info(f"ℹ️ Database contains {corpus_stats['total_citations']} citations (no limits - all will be screened)")
 
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:

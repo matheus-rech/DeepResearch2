@@ -254,15 +254,23 @@ python main.py sr-ui
 
 ## Recent Changes
 
-- **July 13, 2025**: Fixed PostgreSQL Transaction Error in Bulk Citation Import
-  - **Issue Fixed**: PostgreSQL transaction was failing with "current transaction is aborted" error during bulk imports
-  - **Root Cause**: When one citation failed to insert/update, the entire transaction was aborted, preventing all subsequent operations
-  - **Solution**: Refactored `bulk_insert_citations()` to process each citation in its own transaction
+- **July 13, 2025**: Fixed PostgreSQL Transaction Error and JSON NaN Parsing in Citation Import
+  - **Issue Fixed**: Two critical bugs in citation import:
+    1. PostgreSQL transaction failing with "current transaction is aborted" error
+    2. JSON parsing errors with NaN values causing import failures
+  - **Root Cause**: 
+    1. When one citation failed, entire transaction was aborted
+    2. Python's NaN values are not valid JSON and were causing parsing errors
+  - **Solution**: 
+    1. Refactored `bulk_insert_citations()` to process each citation in individual transactions
+    2. Added NaN cleaning logic to convert NaN values to None before JSON serialization
+    3. Added validation to skip citations with invalid IDs (nan/NaN)
   - **Benefits**: 
-    - Individual citation failures don't block the entire import
-    - Better error handling and logging for problematic citations
-    - More robust import process that continues even if some citations fail
-  - **Trade-off**: Slightly slower performance due to individual transactions, but much more reliable
+    - Individual citation failures don't block entire import
+    - NaN values are properly handled in all JSON fields
+    - Better error handling with detailed logging
+    - Import continues even if some citations have issues
+  - **UI Improvement**: Updated citation count message to clarify "no limits - all will be screened"
 
 - **July 13, 2025**: Removed Citation Limits for Comprehensive Screening
   - **Issue Fixed**: Previous implementation had hard limits on citation retrieval that could prevent comprehensive screening
