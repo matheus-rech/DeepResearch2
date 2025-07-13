@@ -254,6 +254,16 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Fixed PostgreSQL Transaction Error in Bulk Citation Import
+  - **Issue Fixed**: PostgreSQL transaction was failing with "current transaction is aborted" error during bulk imports
+  - **Root Cause**: When one citation failed to insert/update, the entire transaction was aborted, preventing all subsequent operations
+  - **Solution**: Refactored `bulk_insert_citations()` to process each citation in its own transaction
+  - **Benefits**: 
+    - Individual citation failures don't block the entire import
+    - Better error handling and logging for problematic citations
+    - More robust import process that continues even if some citations fail
+  - **Trade-off**: Slightly slower performance due to individual transactions, but much more reliable
+
 - **July 13, 2025**: Removed Citation Limits for Comprehensive Screening
   - **Issue Fixed**: Previous implementation had hard limits on citation retrieval that could prevent comprehensive screening
   - **Changes Made**:

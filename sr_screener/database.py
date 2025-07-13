@@ -130,22 +130,18 @@ def bulk_insert_citations(df: pd.DataFrame):
     """
     stats = {"inserted": 0, "updated": 0, "skipped": 0, "total": len(df)}
     
-    with get_db() as db:
-        # Get all existing citation IDs to avoid duplicate queries
-        existing_ids = set()
-        try:
-            existing_citations = db.query(Citation.id).all()
-            existing_ids = {citation.id for citation in existing_citations}
-        except Exception as e:
-            logger.warning(f"Could not fetch existing citation IDs: {e}")
-        
-        for _, row in df.iterrows():
+    # Process each citation individually to avoid transaction issues
+    for _, row in df.iterrows():
+        with get_db() as db:
             try:
                 citation_id = str(row.get('id', ''))
                 if not citation_id:
                     logger.warning("Skipping row with empty ID")
                     stats["skipped"] += 1
                     continue
+                
+                # Check if citation exists
+                existing = db.query(Citation).filter(Citation.id == citation_id).first()
                 
                 # Prepare citation data
                 citation_data = {
@@ -160,46 +156,36 @@ def bulk_insert_citations(df: pd.DataFrame):
                     'raw_data': row.get('raw_data', {}) if isinstance(row.get('raw_data'), dict) else {}
                 }
                 
-                if citation_id in existing_ids:
+                if existing:
                     # Update existing citation
-                    try:
-                        db.query(Citation).filter(Citation.id == citation_id).update(citation_data)
-                        stats["updated"] += 1
-                    except Exception as e:
-                        logger.error(f"Error updating citation {citation_id}: {str(e)}")
-                        stats["skipped"] += 1
+                    for key, value in citation_data.items():
+                        setattr(existing, key, value)
+                    stats["updated"] += 1
                 else:
                     # Insert new citation
-                    try:
-                        citation = Citation(id=citation_id, **citation_data)
-                        db.add(citation)
-                        existing_ids.add(citation_id)  # Add to our local set
-                        stats["inserted"] += 1
-                    except Exception as e:
-                        logger.error(f"Error inserting citation {citation_id}: {str(e)}")
-                        stats["skipped"] += 1
+                    citation = Citation(id=citation_id, **citation_data)
+                    db.add(citation)
+                    stats["inserted"] += 1
+                
+                db.commit()
                         
             except Exception as e:
                 logger.error(f"Error processing citation {row.get('id', 'unknown')}: {str(e)}")
+                db.rollback()
                 stats["skipped"] += 1
                 continue
-        
+    
+    # Generate embeddings for new citations after all are inserted
+    if openai_client and (stats['inserted'] > 0 or stats['updated'] > 0):
         try:
-            db.commit()
-            
-            # Generate embeddings for new citations in background
-            if openai_client and (stats['inserted'] > 0 or stats['updated'] > 0):
-                logger.info("Generating embeddings for new citations...")
-                embedding_stats = generate_citation_embeddings()
-                logger.info(f"Embedding results: {embedding_stats}")
-                stats['embeddings'] = embedding_stats
-                
+            logger.info("Generating embeddings for new citations...")
+            embedding_stats = generate_citation_embeddings()
+            logger.info(f"Embedding results: {embedding_stats}")
+            stats['embeddings'] = embedding_stats
         except Exception as e:
-            logger.error(f"Error committing changes: {str(e)}")
-            db.rollback()
-            raise
-        
-        return stats
+            logger.warning(f"Could not generate embeddings: {e}")
+    
+    return stats
 
 
 def search_citations(query: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
