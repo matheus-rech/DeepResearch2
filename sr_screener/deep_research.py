@@ -102,7 +102,7 @@ Document your reasoning clearly for transparency and potential appeals."""
     # Configure MCP server URL - needs to be accessible from OpenAI's servers
     # In production, this should be your deployed server URL
     if os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
-        # Running on Replit - use the public URL without port (Replit handles port forwarding)
+        # Running on Replit - use the public URL with port
         repl_slug = os.getenv("REPL_SLUG")
         repl_owner = os.getenv("REPL_OWNER")
         mcp_url = f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"

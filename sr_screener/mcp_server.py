@@ -4,6 +4,7 @@ MCP Server for Systematic Review Screening
 Implements search and fetch tools for Deep Research integration
 """
 import os
+import time
 import logging
 from typing import Dict, List, Any, Optional
 
@@ -167,6 +168,20 @@ def create_server():
         except Exception as e:
             logger.error(f"Fetch error: {e}")
             raise ValueError(f"Error fetching citation: {str(e)}")
+    
+    @mcp.tool()
+    async def health_check() -> Dict[str, str]:
+        """
+        Health check endpoint to verify server is running.
+        
+        Returns:
+            Simple health status
+        """
+        return {
+            "status": "healthy",
+            "server": "Systematic Review MCP Server",
+            "timestamp": str(time.time())
+        }
     
     @mcp.tool()
     async def corpus_info() -> Dict[str, Any]:
