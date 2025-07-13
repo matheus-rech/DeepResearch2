@@ -254,6 +254,18 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Fixed Multi-Agent Async/Sync Compatibility Issues
+  - **Issue Fixed**: Multi-agent research pipeline was using async OpenAI client calls causing runtime errors
+  - **Root Cause**: Mixed async/sync code execution in Streamlit environment
+  - **Solution**: 
+    1. Converted all multi-agent methods from async to sync
+    2. Changed OpenAI client from AsyncOpenAI to OpenAI
+    3. Updated deep_research.py to call sync run_multi_agent_screening function
+    4. Fixed MCP server host binding to 0.0.0.0:8001 for external accessibility
+  - **Benefits**: Multi-agent screening now works properly without async execution errors
+  - **MCP Server**: Now externally accessible at proper Replit URL format for Deep Research API
+  - **Status**: All sync conversions complete, both single-agent and multi-agent modes functional
+
 - **July 13, 2025**: Added Sample PICO Criteria Loading System
   - **New Feature**: Created `sample_criteria.json` with pre-configured PICO criteria for Depression/MRgFUS research
   - **UI Enhancement**: Added "Load Sample Criteria" button in Step 2 that automatically populates all PICO and inclusion/exclusion fields

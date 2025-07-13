@@ -7,13 +7,13 @@ import json
 import asyncio
 import logging
 from typing import Dict, List, Any, Optional
-from openai import AsyncOpenAI
+from openai import OpenAI
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# Initialize async client
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=3600.0)  # 1 hour timeout as per docs
+# Initialize sync client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=3600.0)  # 1 hour timeout as per docs
 
 # Model selection per Deep Research best practices
 FAST_MODEL = "gpt-4.1"  # For clarification and triage steps
@@ -120,7 +120,7 @@ class MultiAgentScreener:
         self.mcp_url = mcp_url
         self.screening_log = []
     
-    async def triage_request(self, criteria: Dict[str, Any]) -> Dict[str, Any]:
+    def triage_request(self, criteria: Dict[str, Any]) -> Dict[str, Any]:
         """Triage agent evaluates if criteria need clarification"""
         prompt = f"""
         Evaluate these systematic review screening criteria:
@@ -131,7 +131,7 @@ class MultiAgentScreener:
         Corpus size: {criteria.get('corpus_size', 0)}
         """
         
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=FAST_MODEL,  # Use fast model for triage per docs
             messages=[
                 {"role": "system", "content": TRIAGE_AGENT_PROMPT},
@@ -142,7 +142,7 @@ class MultiAgentScreener:
         
         return json.loads(response.choices[0].message.content)
     
-    async def clarify_criteria(self, criteria: Dict[str, Any], missing_elements: List[str]) -> List[str]:
+    def clarify_criteria(self, criteria: Dict[str, Any], missing_elements: List[str]) -> List[str]:
         """Clarifier agent generates questions for missing elements"""
         prompt = f"""
         Current criteria:
@@ -153,7 +153,7 @@ class MultiAgentScreener:
         Generate 2-3 focused clarification questions.
         """
         
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=FAST_MODEL,  # Use fast model for clarification per docs
             messages=[
                 {"role": "system", "content": CLARIFIER_AGENT_PROMPT},
@@ -165,7 +165,7 @@ class MultiAgentScreener:
         questions = response.choices[0].message.content.strip().split('\n')
         return [q.strip() for q in questions if q.strip()]
     
-    async def build_instructions(self, criteria: Dict[str, Any], clarifications: Optional[Dict[str, str]] = None) -> str:
+    def build_instructions(self, criteria: Dict[str, Any], clarifications: Optional[Dict[str, str]] = None) -> str:
         """Instruction builder creates detailed screening protocol"""
         prompt = f"""
         Create screening instructions for:
@@ -187,7 +187,7 @@ class MultiAgentScreener:
         if clarifications:
             prompt += f"\n\nClarifications provided:\n{json.dumps(clarifications, indent=2)}"
         
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=FAST_MODEL,  # Use fast model for instruction building per docs
             messages=[
                 {"role": "system", "content": INSTRUCTION_BUILDER_PROMPT},
@@ -197,7 +197,7 @@ class MultiAgentScreener:
         
         return response.choices[0].message.content
     
-    async def screen_citations(self, instructions: str, batch_size: int = 20) -> List[Dict[str, Any]]:
+    def screen_citations(self, instructions: str, batch_size: int = 20) -> List[Dict[str, Any]]:
         """Screening agent performs the actual citation screening"""
         screening_prompt = f"""
         {SCREENING_AGENT_PROMPT}
@@ -218,7 +218,7 @@ class MultiAgentScreener:
         """
         
         # Use Deep Research model with Responses API per documentation
-        response = await client.responses.create(
+        response = client.responses.create(
             model=DEEP_RESEARCH_MODEL,
             input=screening_prompt,
             tools=[
@@ -274,7 +274,7 @@ class MultiAgentScreener:
             logger.error("No content in response")
             return []
     
-    async def run_screening_pipeline(
+    def run_screening_pipeline(
         self,
         criteria: Dict[str, Any],
         interactive: bool = False,
@@ -288,7 +288,7 @@ class MultiAgentScreener:
         # Step 1: Triage
         if callback:
             callback("Triaging screening criteria...")
-        triage_result = await self.triage_request(criteria)
+        triage_result = self.triage_request(criteria)
         self.screening_log.append({"agent": "triage", "result": triage_result})
         
         # Step 2: Clarification (if needed)
@@ -296,7 +296,7 @@ class MultiAgentScreener:
         if triage_result.get("needs_clarification") and interactive:
             if callback:
                 callback("Generating clarification questions...")
-            questions = await self.clarify_criteria(
+            questions = self.clarify_criteria(
                 criteria, 
                 triage_result.get("missing_elements", [])
             )
@@ -308,13 +308,13 @@ class MultiAgentScreener:
         # Step 3: Build instructions
         if callback:
             callback("Building detailed screening instructions...")
-        instructions = await self.build_instructions(criteria, clarifications)
+        instructions = self.build_instructions(criteria, clarifications)
         self.screening_log.append({"agent": "instruction_builder", "instructions": instructions})
         
         # Step 4: Screen citations
         if callback:
             callback("Performing systematic screening...")
-        screening_results = await self.screen_citations(instructions)
+        screening_results = self.screen_citations(instructions)
         
         # Return complete results
         return {
@@ -326,7 +326,7 @@ class MultiAgentScreener:
 
 
 # Convenience function for integration
-async def run_multi_agent_screening(
+def run_multi_agent_screening(
     pico_criteria: Dict[str, str],
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
@@ -347,7 +347,7 @@ async def run_multi_agent_screening(
         "search_mode": search_mode
     }
     
-    return await screener.run_screening_pipeline(
+    return screener.run_screening_pipeline(
         criteria,
         interactive=False,  # Set to True for user clarifications
         callback=callback

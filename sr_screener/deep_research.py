@@ -267,26 +267,19 @@ def run_systematic_screening(
     """
     # Use multi-agent mode if requested
     if use_multi_agent:
-        import asyncio
         from multi_agent_research import run_multi_agent_screening
         
-        # Run async function in sync context
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(
-                run_multi_agent_screening(
-                    pico_criteria,
-                    inclusion_criteria,
-                    exclusion_criteria,
-                    corpus_size,
-                    mcp_url,
-                    callback
-                )
-            )
-            return result
-        finally:
-            loop.close()
+        # Run sync function directly
+        result = run_multi_agent_screening(
+            pico_criteria,
+            inclusion_criteria,
+            exclusion_criteria,
+            corpus_size,
+            mcp_url,
+            callback,
+            search_mode
+        )
+        return result
     try:
         # Launch the job
         if callback:
