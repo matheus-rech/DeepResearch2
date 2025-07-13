@@ -229,7 +229,7 @@ class MultiAgentScreener:
                 },
                 {
                     "type": "mcp",
-                    "server_label": "systematic_review_citations",
+                    "server_label": "Systematic Review MCP Server",
                     "server_url": self.mcp_url,
                     "require_approval": "never"
                 }
