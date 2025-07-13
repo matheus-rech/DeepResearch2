@@ -1,9 +1,9 @@
 """
 Citation file parsers for various formats
-Supports: PubMed XML, RIS, CSV, and more
+Supports: PubMed XML, RIS, CSV, ArXiv, and more
 """
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import pandas as pd
 import rispy
 import io
@@ -11,6 +11,16 @@ import csv
 import json
 from dateutil import parser as date_parser
 from bs4 import BeautifulSoup
+import logging
+
+# Optional imports for academic paper readers
+try:
+    from llama_index.readers.papers import ArxivReader, PubmedReader
+    LLAMA_READERS_AVAILABLE = True
+except ImportError:
+    LLAMA_READERS_AVAILABLE = False
+    
+logger = logging.getLogger(__name__)
 
 
 def normalize_year(date_str: Any) -> Optional[int]:
@@ -376,3 +386,116 @@ def parse_citations(file_obj, filename: str) -> pd.DataFrame:
         return parse_endnote_xml(file_obj)
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
+
+
+def parse_arxiv_search(search_query: str, max_results: int = 10) -> pd.DataFrame:
+    """
+    Fetch papers from ArXiv using search query.
+    
+    Args:
+        search_query: ArXiv search query (e.g., "quantum computing", "au:Karpathy")
+        max_results: Maximum number of papers to fetch
+        
+    Returns:
+        DataFrame with standardized citation columns
+    """
+    if not LLAMA_READERS_AVAILABLE:
+        raise ImportError("Please install llama-index-readers-papers to use ArXiv search")
+    
+    try:
+        loader = ArxivReader()
+        documents, abstracts = loader.load_papers_and_abstracts(
+            search_query=search_query,
+            max_results=max_results
+        )
+        
+        citations = []
+        for doc, abstract in zip(documents, abstracts):
+            # Extract metadata from document
+            metadata = doc.metadata
+            
+            # Extract authors from metadata
+            authors = metadata.get('authors', [])
+            if isinstance(authors, str):
+                authors = [authors]
+            
+            # Extract year from published date
+            published = metadata.get('published', '')
+            year = None
+            if published:
+                year = normalize_year(published)
+            
+            citation = {
+                'id': f"arxiv:{metadata.get('article_id', '')}",
+                'title': metadata.get('title', ''),
+                'abstract': abstract.text if abstract else metadata.get('summary', ''),
+                'year': year,
+                'authors': authors,
+                'journal': 'arXiv',
+                'doi': metadata.get('doi', ''),
+                'mesh_terms': [],
+                'keywords': metadata.get('categories', '').split() if metadata.get('categories') else [],
+                'raw_data': metadata
+            }
+            citations.append(citation)
+        
+        return pd.DataFrame(citations)
+        
+    except Exception as e:
+        logger.error(f"Error fetching from ArXiv: {e}")
+        raise
+
+
+def parse_pubmed_search(search_query: str, max_results: int = 10) -> pd.DataFrame:
+    """
+    Fetch papers from PubMed using search query.
+    
+    Args:
+        search_query: PubMed search query (e.g., "diabetes", "cancer immunotherapy")
+        max_results: Maximum number of papers to fetch
+        
+    Returns:
+        DataFrame with standardized citation columns
+    """
+    if not LLAMA_READERS_AVAILABLE:
+        raise ImportError("Please install llama-index-readers-papers to use PubMed search")
+    
+    try:
+        loader = PubmedReader()
+        documents = loader.load_data(
+            search_query=search_query,
+            max_results=max_results
+        )
+        
+        citations = []
+        for doc in documents:
+            # Extract metadata from document
+            metadata = doc.metadata
+            
+            # Parse authors from metadata
+            authors_str = metadata.get('Authors', '')
+            authors = [a.strip() for a in authors_str.split(';')] if authors_str else []
+            
+            # Extract year from publication date
+            pub_date = metadata.get('PubDate', '')
+            year = normalize_year(pub_date)
+            
+            citation = {
+                'id': f"PMID:{metadata.get('PubmedId', '')}",
+                'title': metadata.get('Title', ''),
+                'abstract': doc.text,  # The document text contains the abstract
+                'year': year,
+                'authors': authors,
+                'journal': metadata.get('Journal', ''),
+                'doi': metadata.get('DOI', ''),
+                'mesh_terms': metadata.get('MeshHeadings', '').split(';') if metadata.get('MeshHeadings') else [],
+                'keywords': metadata.get('Keywords', '').split(';') if metadata.get('Keywords') else [],
+                'raw_data': metadata
+            }
+            citations.append(citation)
+        
+        return pd.DataFrame(citations)
+        
+    except Exception as e:
+        logger.error(f"Error fetching from PubMed: {e}")
+        raise

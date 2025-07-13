@@ -254,6 +254,17 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Added Direct Academic Database Search Integration (ArXiv & PubMed)
+  - **New Feature**: Integrated LlamaIndex readers for direct academic paper search
+  - **Search Sources**:
+    - ArXiv: Search preprints in physics, mathematics, computer science, etc.
+    - PubMed: Search biomedical and life science literature
+  - **UI Enhancement**: Added new tab in Step 1 for "Search Academic Databases"
+  - **Quality Guarantee**: Papers from these sources always include full abstracts
+  - **Clean Integration**: Does not interfere with existing deep research functionality
+  - **User Flow**: Users can now either upload files OR search databases directly
+  - **Benefits**: Ensures high-quality citations with complete abstracts for AI screening
+
 - **July 13, 2025**: Added Citation Data Validation System for Abstract Quality Assurance
   - **New Component**: Created `data_validator.py` module with `CitationValidator` class
   - **Validation Features**:

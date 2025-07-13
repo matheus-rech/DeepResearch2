@@ -134,96 +134,198 @@ def main():
 
 def show_upload_step():
     """Show the citation upload interface."""
-    st.header("Step 1: Upload Citations")
-    st.markdown("""
-    Upload your citation export file. Supported formats:
-    - **PubMed XML** (.xml) - From PubMed export
-    - **RIS** (.ris) - From EndNote, Mendeley, etc.
-    - **CSV** (.csv) - Generic format with standard columns
-    - **EndNote XML** (.xml) - From EndNote library
-    """)
+    st.header("Step 1: Load Citations")
+    
+    # Create tabs for different input methods
+    tab1, tab2 = st.tabs(["📁 Upload File", "🔍 Search Academic Databases"])
+    
+    with tab1:
+        st.markdown("""
+        Upload your citation export file. Supported formats:
+        - **PubMed XML** (.xml) - From PubMed export
+        - **RIS** (.ris) - From EndNote, Mendeley, etc.
+        - **CSV** (.csv) - Generic format with standard columns
+        - **EndNote XML** (.xml) - From EndNote library
+        """)
 
-    uploaded_file = st.file_uploader(
-        "Choose a citation file",
-        type=['xml', 'ris', 'csv', 'nbib'],
-        help="Upload your exported citations from reference management software"
-    )
+        uploaded_file = st.file_uploader(
+            "Choose a citation file",
+            type=['xml', 'ris', 'csv', 'nbib'],
+            help="Upload your exported citations from reference management software"
+        )
 
-    if uploaded_file:
-        st.info(f"File uploaded: {uploaded_file.name} ({uploaded_file.size:,} bytes)")
+        if uploaded_file:
+            st.info(f"File uploaded: {uploaded_file.name} ({uploaded_file.size:,} bytes)")
 
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if st.button("📥 Parse & Load", type="primary", use_container_width=True):
-                with st.spinner("Parsing citations..."):
-                    try:
-                        # Parse the file
-                        df = parsers.parse_citations(uploaded_file, uploaded_file.name)
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                if st.button("📥 Parse & Load", type="primary", use_container_width=True):
+                    with st.spinner("Parsing citations..."):
+                        try:
+                            # Parse the file
+                            df = parsers.parse_citations(uploaded_file, uploaded_file.name)
 
-                        # Show preview
-                        st.success(f"Successfully parsed {len(df)} citations!")
+                            # Show preview
+                            st.success(f"Successfully parsed {len(df)} citations!")
 
-                        # Validate citations
-                        validator = CitationValidator()
-                        validated_df, validation_report = validator.validate_citations(df)
+                            # Validate citations
+                            validator = CitationValidator()
+                            validated_df, validation_report = validator.validate_citations(df)
                         
-                        # Show validation warnings
-                        if validation_report["critical_issues"]["missing_abstracts"] > 0:
-                            st.warning(f"""
-                            ⚠️ **Abstract Coverage Warning**
-                            - {validation_report['critical_issues']['missing_abstracts']} citations ({validation_report['critical_issues']['missing_abstracts_pct']:.1f}%) are missing abstracts
-                            - Abstracts are critical for accurate AI screening
+                            # Show validation warnings
+                            if validation_report["critical_issues"]["missing_abstracts"] > 0:
+                                st.warning(f"""
+                                ⚠️ **Abstract Coverage Warning**
+                                - {validation_report['critical_issues']['missing_abstracts']} citations ({validation_report['critical_issues']['missing_abstracts_pct']:.1f}%) are missing abstracts
+                                - Abstracts are critical for accurate AI screening
+                                
+                                **Recommendation**: Consider using a different export format that includes full abstracts
+                                """)
                             
-                            **Recommendation**: Consider using a different export format that includes full abstracts
-                            """)
-                        
-                        # Show data quality score
-                        quality_score = validation_report["quality_score"]
-                        if quality_score < 80:
-                            st.error(f"📊 Data Quality Score: {quality_score:.1f}% - Below recommended threshold")
-                        else:
-                            st.info(f"📊 Data Quality Score: {quality_score:.1f}% - Good quality for screening")
-                        
-                        # Show recommendations
-                        if validation_report.get("recommendations"):
-                            with st.expander("📋 Data Quality Recommendations"):
-                                for rec in validation_report["recommendations"]:
-                                    st.write(f"• {rec}")
-                        
-                        # Show problematic citations
-                        if validation_report.get("problematic_citations"):
-                            with st.expander("⚠️ Citations with Issues"):
-                                for issue in validation_report["problematic_citations"][:5]:
-                                    if isinstance(issue, dict) and "citation_id" in issue:
-                                        st.write(f"**{issue['citation_id']}**: {issue.get('title', 'Unknown')}")
-                                        for prob in issue.get('issues', []):
-                                            st.write(f"  - {prob}")
-                                    elif "note" in issue:
-                                        st.write(issue["note"])
+                            # Show data quality score
+                            quality_score = validation_report["quality_score"]
+                            if quality_score < 80:
+                                st.error(f"📊 Data Quality Score: {quality_score:.1f}% - Below recommended threshold")
+                            else:
+                                st.info(f"📊 Data Quality Score: {quality_score:.1f}% - Good quality for screening")
+                            
+                            # Show recommendations
+                            if validation_report.get("recommendations"):
+                                with st.expander("📋 Data Quality Recommendations"):
+                                    for rec in validation_report["recommendations"]:
+                                        st.write(f"• {rec}")
+                            
+                            # Show problematic citations
+                            if validation_report.get("problematic_citations"):
+                                with st.expander("⚠️ Citations with Issues"):
+                                    for issue in validation_report["problematic_citations"][:5]:
+                                        if isinstance(issue, dict) and "citation_id" in issue:
+                                            st.write(f"**{issue['citation_id']}**: {issue.get('title', 'Unknown')}")
+                                            for prob in issue.get('issues', []):
+                                                st.write(f"  - {prob}")
+                                        elif "note" in issue:
+                                            st.write(issue["note"])
 
-                        # Display sample
-                        st.subheader("Preview (first 5 citations)")
-                        preview_df = validated_df[['id', 'title', 'year', 'journal']].head()
-                        st.dataframe(preview_df, use_container_width=True)
+                            # Display sample
+                            st.subheader("Preview (first 5 citations)")
+                            preview_df = validated_df[['id', 'title', 'year', 'journal']].head()
+                            st.dataframe(preview_df, use_container_width=True)
 
-                        # Save to database
-                        with st.spinner("Loading validated citations into database..."):
-                            db.init_db()
-                            stats = db.bulk_insert_citations(validated_df)
+                            # Save to database
+                            with st.spinner("Loading validated citations into database..."):
+                                db.init_db()
+                                stats = db.bulk_insert_citations(validated_df)
 
-                        # Show detailed results
-                        if stats['inserted'] > 0:
-                            st.success(f"✅ Added {stats['inserted']} new citations!")
-                        if stats['updated'] > 0:
-                            st.info(f"📝 Updated {stats['updated']} existing citations")
-                        if stats['skipped'] > 0:
-                            st.warning(f"⚠️ Skipped {stats['skipped']} citations due to errors")
-                        st.session_state.citations_loaded = True
-                        st.rerun()
+                            # Show detailed results
+                            if stats['inserted'] > 0:
+                                st.success(f"✅ Added {stats['inserted']} new citations!")
+                            if stats['updated'] > 0:
+                                st.info(f"📝 Updated {stats['updated']} existing citations")
+                            if stats['skipped'] > 0:
+                                st.warning(f"⚠️ Skipped {stats['skipped']} citations due to errors")
+                            st.session_state.citations_loaded = True
+                            st.rerun()
 
-                    except Exception as e:
-                        st.error(f"Error parsing file: {str(e)}")
-                        st.exception(e)
+                        except Exception as e:
+                            st.error(f"Error parsing file: {str(e)}")
+                            st.exception(e)
+    
+    with tab2:
+        st.markdown("""
+        Search academic databases directly to ensure high-quality citations with abstracts:
+        - **ArXiv**: Preprints in physics, mathematics, computer science, and more
+        - **PubMed**: Biomedical and life science literature
+        """)
+        
+        # Check if LlamaIndex readers are available
+        if parsers.LLAMA_READERS_AVAILABLE:
+            search_source = st.radio(
+                "Select Database",
+                ["ArXiv", "PubMed"],
+                horizontal=True
+            )
+            
+            col1, col2 = st.columns([3, 1])
+            
+            with col1:
+                if search_source == "ArXiv":
+                    search_query = st.text_input(
+                        "ArXiv Search Query",
+                        placeholder="e.g., quantum computing, au:Karpathy, cat:cs.AI",
+                        help="Use standard ArXiv search syntax"
+                    )
+                else:
+                    search_query = st.text_input(
+                        "PubMed Search Query",
+                        placeholder="e.g., diabetes type 2, cancer immunotherapy",
+                        help="Use standard PubMed search terms"
+                    )
+            
+            with col2:
+                max_results = st.number_input(
+                    "Max Results",
+                    min_value=1,
+                    max_value=100,
+                    value=20,
+                    help="Number of papers to fetch"
+                )
+            
+            if st.button("🔎 Search & Load", type="primary", use_container_width=True):
+                if search_query:
+                    with st.spinner(f"Searching {search_source} for papers..."):
+                        try:
+                            # Use the appropriate parser
+                            if search_source == "ArXiv":
+                                df = parsers.parse_arxiv_search(search_query, max_results)
+                            else:
+                                df = parsers.parse_pubmed_search(search_query, max_results)
+                            
+                            st.success(f"Found {len(df)} papers from {search_source}!")
+                            
+                            # Validate citations
+                            validator = CitationValidator()
+                            validated_df, validation_report = validator.validate_citations(df)
+                            
+                            # Show data quality (should be high for academic sources)
+                            quality_score = validation_report["quality_score"]
+                            st.success(f"📊 Data Quality Score: {quality_score:.1f}% - Excellent quality from {search_source}")
+                            
+                            # Display preview
+                            st.subheader("Preview (first 5 papers)")
+                            preview_df = validated_df[['id', 'title', 'year', 'journal']].head()
+                            st.dataframe(preview_df, use_container_width=True)
+                            
+                            # Save to database
+                            with st.spinner("Loading into database..."):
+                                db.init_db()
+                                stats = db.bulk_insert_citations(validated_df)
+                            
+                            # Show results
+                            if stats['inserted'] > 0:
+                                st.success(f"✅ Added {stats['inserted']} new papers!")
+                            if stats['updated'] > 0:
+                                st.info(f"📝 Updated {stats['updated']} existing papers")
+                            if stats['skipped'] > 0:
+                                st.warning(f"⚠️ Skipped {stats['skipped']} papers due to errors")
+                            
+                            st.session_state.citations_loaded = True
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"Error searching {search_source}: {str(e)}")
+                            if "llama-index-readers-papers" in str(e):
+                                st.info("💡 Tip: Make sure llama-index-readers-papers is installed")
+                else:
+                    st.warning("Please enter a search query")
+        else:
+            st.warning("""
+            ⚠️ Academic database search is not available.
+            
+            To enable this feature, install the required package:
+            ```
+            pip install llama-index-readers-papers
+            ```
+            """)
 
     # Option to skip if citations already loaded
     corpus_stats = db.get_corpus_stats()
