@@ -249,7 +249,8 @@ def run_systematic_screening(
     exclusion_criteria: List[str],
     corpus_size: int,
     mcp_url: str = "http://localhost:8001/sse/",
-    callback=None
+    callback=None,
+    use_multi_agent: bool = False
 ) -> Dict[str, Any]:
     """
     Run a complete systematic review screening process.
@@ -261,10 +262,33 @@ def run_systematic_screening(
         corpus_size: Number of citations
         mcp_url: MCP server URL
         callback: Optional callback function for progress updates
+        use_multi_agent: Whether to use multi-agent architecture
         
     Returns:
         Dictionary with screening results and statistics
     """
+    # Use multi-agent mode if requested
+    if use_multi_agent:
+        import asyncio
+        from .multi_agent_research import run_multi_agent_screening
+        
+        # Run async function in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(
+                run_multi_agent_screening(
+                    pico_criteria,
+                    inclusion_criteria,
+                    exclusion_criteria,
+                    corpus_size,
+                    mcp_url,
+                    callback
+                )
+            )
+            return result
+        finally:
+            loop.close()
     try:
         # Launch the job
         if callback:

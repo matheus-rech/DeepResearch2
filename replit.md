@@ -93,9 +93,23 @@ The application supports two distinct modes:
   - Inclusion/exclusion criteria setup
   - Real-time screening progress
   - Results review and export
+  - Advanced options for multi-agent mode selection
 - **Steps**: Upload → Criteria → Screen → Results
 
-#### 6. ICE Critic (`sr_screener/ice_critic.py`)
+#### 6. Multi-Agent Research (`sr_screener/multi_agent_research.py`)
+- **Purpose**: Orchestrates multi-agent pipeline for enhanced screening
+- **Agents**:
+  - **Triage Agent**: Evaluates criteria completeness and routes requests
+  - **Clarifier Agent**: Generates targeted questions for missing elements
+  - **Instruction Builder**: Creates detailed screening protocols
+  - **Screening Agent**: Performs systematic screening with Deep Research
+- **Benefits**:
+  - Maximizes context window usage per agent
+  - Optimizes each step of the screening process
+  - Improves screening quality through specialized agents
+- **Integration**: Called when user selects multi-agent mode in UI
+
+#### 7. ICE Critic (`sr_screener/ice_critic.py`)
 - **Purpose**: Internal Consistency Evaluation
 - **Analyses**:
   - PICO match validation
@@ -235,6 +249,17 @@ python main.py sr-ui
    - Export results as JSON, CSV, or PRISMA flow data
 
 ## Recent Changes
+
+- **July 13, 2025**: Implemented Multi-Agent Architecture for Systematic Review
+  - Added multi-agent pipeline inspired by OpenAI cookbook with specialized agents:
+    - **Triage Agent**: Evaluates criteria completeness and routes requests
+    - **Clarifier Agent**: Generates targeted questions for missing PICOTT elements
+    - **Instruction Builder**: Creates detailed screening protocols
+    - **Screening Agent**: Performs systematic screening with Deep Research
+  - Benefits: Maximizes context window usage, optimizes each step, improves screening quality
+  - User can now choose between single-agent (faster) or multi-agent (more thorough) modes
+  - Updated UI with Advanced Options toggle for screening mode selection
+  - Architecture designed to match OpenAI's Deep Research multi-agent pattern
 
 - **July 13, 2025**: Added Systematic Review Screener and Fixed WebSocket Issues
   - Created comprehensive citation screening tool with Streamlit UI

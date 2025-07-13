@@ -345,6 +345,26 @@ def show_screening_step():
     stats = db.get_corpus_stats()
     st.info(f"📊 Ready to screen {stats['total_citations']} citations")
     
+    # Advanced options
+    with st.expander("Advanced Options"):
+        use_multi_agent = st.checkbox(
+            "Use Multi-Agent Architecture",
+            value=st.session_state.get('use_multi_agent', False),
+            key='use_multi_agent',
+            help="Enable multi-agent pipeline with specialized agents for triage, clarification, instruction building, and screening. This can improve quality but takes longer."
+        )
+        
+        if use_multi_agent:
+            st.info("""
+            **Multi-Agent Pipeline:**
+            1. **Triage Agent**: Evaluates criteria completeness
+            2. **Clarifier Agent**: Generates clarification questions (if needed)
+            3. **Instruction Builder**: Creates detailed screening protocol
+            4. **Screening Agent**: Performs systematic screening
+            
+            This approach maximizes context window usage and optimizes each step.
+            """)
+    
     # Run screening button
     st.divider()
     col3, col4, col5 = st.columns([1, 2, 1])
@@ -371,7 +391,8 @@ def show_screening_step():
                         st.session_state.exclusion_criteria,
                         stats['total_citations'],
                         MCP_URL,
-                        callback=update_progress
+                        callback=update_progress,
+                        use_multi_agent=st.session_state.get('use_multi_agent', False)
                     )
                     
                     # Save results
