@@ -229,7 +229,6 @@ class MultiAgentScreener:
                     }
                 }
             ],
-            max_tool_calls=200,  # Limit tool calls for cost control
             mode="background"  # Use background mode as recommended
         )
         

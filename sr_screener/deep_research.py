@@ -112,7 +112,6 @@ Document your reasoning clearly for transparency and potential appeals."""
                     }
                 }
             ],
-            max_tool_calls=200,  # Control costs by limiting tool calls
             mode="background"  # Use background mode as recommended
         )
         
@@ -254,7 +253,7 @@ def run_systematic_screening(
     # Use multi-agent mode if requested
     if use_multi_agent:
         import asyncio
-        from .multi_agent_research import run_multi_agent_screening
+        from multi_agent_research import run_multi_agent_screening
         
         # Run async function in sync context
         loop = asyncio.new_event_loop()
