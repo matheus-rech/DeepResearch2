@@ -7,6 +7,7 @@ import pandas as pd
 import json
 import os
 import threading
+import time
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -19,7 +20,7 @@ import ice_critic
 load_dotenv()
 
 # Configuration
-MCP_URL = os.getenv("MCP_URL", "http://localhost:8000/sse/")
+MCP_URL = os.getenv("MCP_URL", "http://localhost:8001/sse/")
 
 # Page configuration
 st.set_page_config(
@@ -68,6 +69,12 @@ def main():
     with st.sidebar:
         st.header("Navigation")
 
+        # Progress indicator
+        progress_steps = ["upload", "criteria", "screen", "results"]
+        current_idx = progress_steps.index(st.session_state.current_step)
+        progress = (current_idx + 1) / len(progress_steps)
+        st.progress(progress)
+
         # Step indicators
         steps = {
             "upload": "1. Upload Citations",
@@ -76,11 +83,13 @@ def main():
             "results": "4. Review Results"
         }
 
-        for step_key, step_name in steps.items():
+        for i, (step_key, step_name) in enumerate(steps.items()):
             if st.session_state.current_step == step_key:
                 st.success(f"**→ {step_name}**")
+            elif i < current_idx:
+                st.info(f"✓ {step_name}")
             else:
-                st.info(step_name)
+                st.text(step_name)
 
         st.divider()
 
@@ -92,7 +101,24 @@ def main():
             if stats["year_distribution"]:
                 st.subheader("Year Distribution")
                 year_df = pd.DataFrame(stats["year_distribution"])
-                st.bar_chart(year_df.set_index("year")["count"])
+                if not year_df.empty:
+                    st.bar_chart(year_df.set_index("year")["count"])
+                    
+        # Help section
+        st.divider()
+        with st.expander("💡 Help"):
+            st.markdown("""
+            **Quick Guide:**
+            1. **Upload**: Import citations from PubMed, RIS, CSV
+            2. **Criteria**: Define PICOTT and inclusion/exclusion rules
+            3. **Screen**: AI analyzes each citation
+            4. **Results**: Review and export findings
+            
+            **Tips:**
+            - Use multi-agent mode for thorough screening
+            - Check ICE analysis for quality issues
+            - Export results in multiple formats
+            """)
 
     # Main content area
     if st.session_state.current_step == "upload":
@@ -560,14 +586,42 @@ def show_results_step():
         st.metric("Total Screened", stats["total_screened"])
     with col2:
         st.metric("Included", stats["included"], 
-                  delta=f"{stats['inclusion_rate']*100:.1f}%")
+                  delta=f"{stats['inclusion_rate']*100:.1f}%",
+                  delta_color="normal")
     with col3:
-        st.metric("Excluded", stats["excluded"])
+        st.metric("Excluded", stats["excluded"],
+                  delta=f"{(1-stats['inclusion_rate'])*100:.1f}%",
+                  delta_color="inverse")
     with col4:
         confidence = stats["confidence_breakdown"]
+        high_conf_pct = (confidence['high'] / stats['total_screened'] * 100) if stats['total_screened'] > 0 else 0
         st.metric("High Confidence", 
-                  f"{confidence['high']}/{stats['total_screened']}")
+                  f"{confidence['high']}/{stats['total_screened']}",
+                  delta=f"{high_conf_pct:.1f}%")
 
+    # Add visualization section
+    st.divider()
+    with st.expander("📊 Screening Overview", expanded=True):
+        col_vis1, col_vis2 = st.columns(2)
+        
+        with col_vis1:
+            # Pie chart for inclusion/exclusion
+            pie_data = pd.DataFrame({
+                'Status': ['Included', 'Excluded'],
+                'Count': [stats['included'], stats['excluded']]
+            })
+            st.subheader("Inclusion vs Exclusion")
+            st.bar_chart(pie_data.set_index('Status'))
+        
+        with col_vis2:
+            # Confidence distribution
+            conf_data = pd.DataFrame({
+                'Confidence': ['High', 'Medium', 'Low'],
+                'Count': [confidence['high'], confidence['medium'], confidence['low']]
+            })
+            st.subheader("Confidence Distribution")
+            st.bar_chart(conf_data.set_index('Confidence'))
+    
     # Results tabs
     tab1, tab2, tab3, tab4 = st.tabs(["Included Citations", "Excluded Citations", 
                                        "ICE Analysis", "Export Results"])
