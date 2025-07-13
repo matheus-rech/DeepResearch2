@@ -26,7 +26,7 @@ The application supports two distinct modes:
 - **File Parsing**: Supports PubMed XML, RIS, CSV, EndNote XML formats
 - **Deep Research Integration**: Uses OpenAI o3-deep-research model
 - **ICE System**: Internal Consistency Evaluation for quality control
-- **Ports**: 8000 (MCP server) + 8501 (Streamlit UI)
+- **Ports**: 8001 (MCP server) + 8000 (Streamlit UI)
 
 ## Key Components
 
@@ -147,6 +147,7 @@ The application supports two distinct modes:
    - Search tool: Full-text search in citation corpus
    - Fetch tool: Retrieve complete citation details
    - Corpus info: Get statistics about loaded citations
+   - MCP server runs on port 8001 (separate from UI)
 
 5. **Results Review (UI)**:
    - Display included/excluded citations
@@ -235,7 +236,7 @@ python main.py sr-ui
 
 ## Recent Changes
 
-- **July 13, 2025**: Added Systematic Review Screener
+- **July 13, 2025**: Added Systematic Review Screener and Fixed WebSocket Issues
   - Created comprehensive citation screening tool with Streamlit UI
   - Integrated PostgreSQL database with full-text search
   - Added support for multiple citation formats (PubMed, RIS, CSV, EndNote)
@@ -243,6 +244,8 @@ python main.py sr-ui
   - Added ICE (Internal Consistency Evaluation) system
   - Created dual-mode main.py supporting both vector store and SR modes
   - Added comprehensive documentation and workflow configurations
+  - **Fixed WebSocket errors**: Swapped port configuration - Streamlit UI now on port 8000 (main web port), MCP server on port 8001
+  - Resolved browser connectivity issues by proper port assignment
 
 - **July 1, 2025**: Fixed vector store ID configuration issue
   - Resolved empty VECTOR_STORE_ID causing server initialization problems
