@@ -254,6 +254,12 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Added Sample PICO Criteria Loading System
+  - **New Feature**: Created `sample_criteria.json` with pre-configured PICO criteria for Depression/MRgFUS research
+  - **UI Enhancement**: Added "Load Sample Criteria" button in Step 2 that automatically populates all PICO and inclusion/exclusion fields
+  - **API Fix**: Removed background mode when using MCP tools (not supported by Deep Research API)
+  - **Benefits**: Researchers can quickly test the system without manually entering criteria each time
+
 - **July 13, 2025**: Fixed Deep Research API Implementation Based on Official Documentation
   - **Issue**: Deep Research API calls were failing with parameter and response parsing errors
   - **Documentation Review**: Analyzed official OpenAI Deep Research API documentation and cookbook examples

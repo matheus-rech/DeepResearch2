@@ -232,54 +232,47 @@ class MultiAgentScreener:
                     "require_approval": "never"
                 }
             ],
-            background=True  # Use background mode as recommended
+            # Note: background mode not supported with MCP tools
         )
         
-        # Poll for results since we're using background mode
-        job_id = response.id
-        logger.info(f"Launched background screening job: {job_id}")
+        # Get results directly since background mode not supported with MCP
+        logger.info(f"Screening job completed: {response.id}")
         
-        # Poll until completion
-        while True:
-            status_response = await client.responses.retrieve(job_id)
-            
-            if status_response.status == "completed":
-                # Extract content from response according to documentation
-                content = None
-                
-                # Try the documented format first
-                if hasattr(status_response, 'output') and status_response.output:
-                    final_output = status_response.output[-1]
-                    if hasattr(final_output, 'content') and final_output.content:
-                        content = final_output.content[0].text
-                # Fallback to output_text if available
-                elif hasattr(status_response, 'output_text') and status_response.output_text:
-                    content = status_response.output_text
-                
-                if content:
-                    # Parse JSON results
-                    try:
-                        import re
-                        json_match = re.search(r'\[[\s\S]*\]', content)
-                        if json_match:
-                            results = json.loads(json_match.group())
-                            return results
-                        else:
-                            logger.error("No JSON array found in response")
-                            return []
-                    except Exception as e:
-                        logger.error(f"Error parsing screening results: {e}")
-                        return []
+        # Extract content from response
+        content = None
+        
+        # Try the documented format first
+        if hasattr(response, 'output') and response.output:
+            final_output = response.output[-1]
+            if hasattr(final_output, 'content') and final_output.content:
+                content = final_output.content[0].text
+        # Fallback to message.content format
+        elif hasattr(response, 'message') and hasattr(response.message, 'content'):
+            if isinstance(response.message.content, list) and response.message.content:
+                content = response.message.content[0].text
+            else:
+                content = response.message.content
+        # Fallback to output_text if available
+        elif hasattr(response, 'output_text') and response.output_text:
+            content = response.output_text
+        
+        if content:
+            # Parse JSON results
+            try:
+                import re
+                json_match = re.search(r'\[[\s\S]*\]', content)
+                if json_match:
+                    results = json.loads(json_match.group())
+                    return results
                 else:
-                    logger.error("No content in completed response")
+                    logger.error("No JSON array found in response")
                     return []
-                    
-            elif status_response.status == "failed":
-                logger.error(f"Screening job failed: {getattr(status_response, 'error', 'Unknown error')}")
+            except Exception as e:
+                logger.error(f"Error parsing screening results: {e}")
                 return []
-            
-            # Still processing
-            await asyncio.sleep(5)
+        else:
+            logger.error("No content in response")
+            return []
     
     async def run_screening_pipeline(
         self,

@@ -115,78 +115,68 @@ Document your reasoning clearly for transparency and potential appeals."""
                     "require_approval": "never"
                 }
             ],
-            background=True  # Use background mode as recommended
+            # Note: background mode not supported with MCP tools
         )
         
         logger.info(f"Launched screening job: {response.id}")
-        return response.id
+        return response
         
     except Exception as e:
         logger.error(f"Failed to launch screening job: {e}")
         raise
 
 
-def poll_job_status(job_id: str, sleep_interval: int = 5) -> Dict[str, Any]:
+def poll_job_status(response: Any, sleep_interval: int = 5) -> Dict[str, Any]:
     """
-    Poll the status of a deep research job until completion.
+    Extract results from a deep research response (no polling needed without background mode).
     
     Args:
-        job_id: The job ID to poll
-        sleep_interval: Seconds between polls
+        response: The response object from create call
+        sleep_interval: Not used (kept for compatibility)
         
     Returns:
         Final response with results
     """
-    while True:
-        try:
-            response = client.responses.retrieve(job_id)
-            
-            if response.status == "completed":
-                # Extract the content according to documentation
-                # The final answer is in response.output[-1].content[0].text
-                if hasattr(response, 'output') and response.output:
-                    # Get the last output item (the final answer)
-                    final_output = response.output[-1]
-                    if hasattr(final_output, 'content') and final_output.content:
-                        content = final_output.content[0].text
-                        return {
-                            "status": "completed",
-                            "content": content,
-                            "reasoning": getattr(response, "reasoning", {}),
-                            "full_output": response.output  # Keep full output for debugging
-                        }
-                    else:
-                        raise ValueError("Completed job has no content in final output")
-                # Fallback to old format if needed
-                elif hasattr(response, 'message') and response.message and response.message.content:
-                    content = response.message.content[0].text
-                    return {
-                        "status": "completed",
-                        "content": content,
-                        "reasoning": getattr(response, "reasoning", {})
-                    }
-                else:
-                    # Try output_text as shown in platform docs
-                    if hasattr(response, 'output_text') and response.output_text:
-                        return {
-                            "status": "completed",
-                            "content": response.output_text,
-                            "reasoning": getattr(response, "reasoning", {})
-                        }
-                    raise ValueError("Completed job has no content")
-                    
-            elif response.status == "failed":
-                error_msg = getattr(response, "error", "Unknown error")
-                raise RuntimeError(f"Job failed: {error_msg}")
-                
+    try:
+        # Extract the content according to documentation
+        # The final answer is in response.output[-1].content[0].text
+        if hasattr(response, 'output') and response.output:
+            # Get the last output item (the final answer)
+            final_output = response.output[-1]
+            if hasattr(final_output, 'content') and final_output.content:
+                content = final_output.content[0].text
+                return {
+                    "status": "completed",
+                    "content": content,
+                    "reasoning": getattr(response, "reasoning", {}),
+                    "full_output": response.output  # Keep full output for debugging
+                }
             else:
-                # Still processing
-                logger.info(f"Job {job_id} status: {response.status}")
-                time.sleep(sleep_interval)
-                
-        except Exception as e:
-            logger.error(f"Error polling job: {e}")
-            raise
+                raise ValueError("Completed job has no content in final output")
+        # Fallback to message format if available
+        elif hasattr(response, 'message') and response.message and hasattr(response.message, 'content'):
+            if isinstance(response.message.content, list) and response.message.content:
+                content = response.message.content[0].text
+            else:
+                content = response.message.content
+            return {
+                "status": "completed",
+                "content": content,
+                "reasoning": getattr(response, "reasoning", {})
+            }
+        else:
+            # Try output_text as shown in platform docs
+            if hasattr(response, 'output_text') and response.output_text:
+                return {
+                    "status": "completed",
+                    "content": response.output_text,
+                    "reasoning": getattr(response, "reasoning", {})
+                }
+            raise ValueError("Response has no content")
+            
+    except Exception as e:
+        logger.error(f"Error extracting results: {e}")
+        raise
 
 
 def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
@@ -301,7 +291,7 @@ def run_systematic_screening(
         # Launch the job
         if callback:
             callback("Launching deep research screening job...")
-        job_id = launch_screening_job(
+        response = launch_screening_job(
             pico_criteria,
             inclusion_criteria,
             exclusion_criteria,
@@ -310,15 +300,15 @@ def run_systematic_screening(
             search_mode
         )
         
-        # Poll for results
+        # Extract results
         if callback:
-            callback(f"Screening in progress (Job ID: {job_id})...")
-        response = poll_job_status(job_id)
+            callback(f"Processing screening results...")
+        results_data = poll_job_status(response)
         
         # Parse results
         if callback:
             callback("Parsing screening results...")
-        results = parse_screening_results(response["content"])
+        results = parse_screening_results(results_data["content"])
         
         # Calculate statistics
         total_screened = len(results)
@@ -333,7 +323,7 @@ def run_systematic_screening(
         }
         
         return {
-            "job_id": job_id,
+            "job_id": response.id,
             "results": results,
             "statistics": {
                 "total_screened": total_screened,
@@ -344,7 +334,7 @@ def run_systematic_screening(
             },
             "included_citations": included,
             "excluded_citations": excluded,
-            "reasoning": response.get("reasoning", {})
+            "reasoning": results_data.get("reasoning", {})
         }
         
     except Exception as e:

@@ -511,17 +511,39 @@ def show_criteria_step():
     # PICOTT Criteria
     st.subheader("PICOTT Criteria")
     st.markdown("Define the key elements of your research question:")
+    
+    # Load sample criteria button
+    if st.button("📋 Load Sample Criteria", help="Load pre-configured sample criteria for testing"):
+        try:
+            import os
+            sample_file = os.path.join("sr_screener", "sample_criteria.json")
+            if os.path.exists(sample_file):
+                with open(sample_file, 'r') as f:
+                    sample_data = json.load(f)
+                    
+                # Store in session state so it persists
+                st.session_state['sample_pico'] = sample_data['pico']
+                st.session_state['sample_inclusion'] = sample_data['inclusion_criteria']
+                st.session_state['sample_exclusion'] = sample_data['exclusion_criteria']
+                st.success("✅ Sample criteria loaded! Fields will be populated below.")
+                st.rerun()
+            else:
+                st.error("Sample criteria file not found.")
+        except Exception as e:
+            st.error(f"Error loading sample criteria: {e}")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
         population = st.text_area(
             "**P**opulation",
+            value=st.session_state.get('sample_pico', {}).get('population', ''),
             placeholder="e.g., Adults with type 2 diabetes",
             help="Who are the participants/patients?"
         )
         intervention = st.text_area(
             "**I**ntervention",
+            value=st.session_state.get('sample_pico', {}).get('intervention', ''),
             placeholder="e.g., Continuous glucose monitoring",
             help="What is the intervention or exposure?"
         )
@@ -529,11 +551,13 @@ def show_criteria_step():
     with col2:
         comparator = st.text_area(
             "**C**omparator",
+            value=st.session_state.get('sample_pico', {}).get('comparator', ''),
             placeholder="e.g., Standard blood glucose monitoring",
             help="What is the comparison or control?"
         )
         outcome = st.text_area(
             "**O**utcome",
+            value=st.session_state.get('sample_pico', {}).get('outcome', ''),
             placeholder="e.g., Glycemic control (HbA1c levels)",
             help="What are the outcomes of interest?"
         )
@@ -541,11 +565,13 @@ def show_criteria_step():
     with col3:
         timeframe = st.text_area(
             "**T**imeframe",
+            value=st.session_state.get('sample_pico', {}).get('timeframe', ''),
             placeholder="e.g., Follow-up ≥ 6 months",
             help="What is the timeframe for outcomes?"
         )
         study_type = st.text_area(
             "Study **T**ype",
+            value=st.session_state.get('sample_pico', {}).get('study_type', ''),
             placeholder="e.g., Randomized controlled trials",
             help="What types of studies to include?"
         )
@@ -559,15 +585,18 @@ def show_criteria_step():
     with col3:
         st.markdown("**Inclusion Criteria**")
         inclusion_criteria = []
+        
+        # Get sample criteria if loaded
+        sample_inclusion = st.session_state.get('sample_inclusion', [])
 
         # Common inclusion criteria with checkboxes
-        if st.checkbox("Randomized Controlled Trials (RCTs)"):
+        if st.checkbox("Randomized Controlled Trials (RCTs)", value="Study design: Randomized controlled trial" in sample_inclusion):
             inclusion_criteria.append("Study design: Randomized controlled trial")
-        if st.checkbox("Prospective cohort studies"):
+        if st.checkbox("Prospective cohort studies", value="Study design: Prospective cohort study" in sample_inclusion):
             inclusion_criteria.append("Study design: Prospective cohort study")
-        if st.checkbox("English language"):
+        if st.checkbox("English language", value="Published in English" in sample_inclusion):
             inclusion_criteria.append("Published in English")
-        if st.checkbox("Peer-reviewed publications"):
+        if st.checkbox("Peer-reviewed publications", value="Published in peer-reviewed journal" in sample_inclusion):
             inclusion_criteria.append("Published in peer-reviewed journal")
 
         # Year range
@@ -592,17 +621,20 @@ def show_criteria_step():
     with col4:
         st.markdown("**Exclusion Criteria**")
         exclusion_criteria = []
+        
+        # Get sample criteria if loaded
+        sample_exclusion = st.session_state.get('sample_exclusion', [])
 
         # Common exclusion criteria
-        if st.checkbox("Case reports"):
+        if st.checkbox("Case reports", value="Study design: Case report or case series" in sample_exclusion):
             exclusion_criteria.append("Study design: Case report or case series")
-        if st.checkbox("Reviews and meta-analyses"):
+        if st.checkbox("Reviews and meta-analyses", value="Study type: Review, systematic review, or meta-analysis" in sample_exclusion):
             exclusion_criteria.append("Study type: Review, systematic review, or meta-analysis")
-        if st.checkbox("Conference abstracts"):
+        if st.checkbox("Conference abstracts", value="Publication type: Conference abstract or poster" in sample_exclusion):
             exclusion_criteria.append("Publication type: Conference abstract or poster")
-        if st.checkbox("Protocols only"):
+        if st.checkbox("Protocols only", value="Study protocols without results" in sample_exclusion):
             exclusion_criteria.append("Study protocols without results")
-        if st.checkbox("Animal studies"):
+        if st.checkbox("Animal studies", value="Non-human studies" in sample_exclusion):
             exclusion_criteria.append("Non-human studies")
 
         # Custom exclusion
