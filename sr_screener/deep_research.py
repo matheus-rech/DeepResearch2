@@ -46,11 +46,13 @@ The citations are available through the MCP internal_file_lookup tool.
 
 Your task is to screen each citation based on the following criteria:
 
-## PICO Criteria (ALL must match for inclusion):
+## PICOTT Criteria (ALL must match for inclusion):
 - Population: {pico_criteria.get('population', 'Not specified')}
 - Intervention: {pico_criteria.get('intervention', 'Not specified')}
 - Comparator: {pico_criteria.get('comparator', 'Not specified')}
 - Outcome: {pico_criteria.get('outcome', 'Not specified')}
+- Timeframe: {pico_criteria.get('timeframe', 'Not specified')}
+- Study Type: {pico_criteria.get('study_type', 'Not specified')}
 
 ## Additional Inclusion Criteria:
 {chr(10).join(f'- {criterion}' for criterion in inclusion_criteria)}
@@ -60,29 +62,33 @@ Your task is to screen each citation based on the following criteria:
 
 ## Instructions:
 1. Search the corpus systematically to identify all potentially relevant citations
-2. For each citation, carefully evaluate against ALL criteria
-3. A citation must meet ALL PICO criteria AND inclusion criteria to be included
+2. Extract PICOTT elements with EXACT QUOTES from the title/abstract
+3. A citation must meet ALL PICOTT criteria AND inclusion criteria to be included
 4. If ANY exclusion criterion is met, the citation should be excluded
 5. When uncertain, err on the side of inclusion for full-text review
 
-Return your results as a JSON array with the following structure:
+Return your results as a JSON array where each citation has this structure:
 [
   {{
     "id": "citation_id",
     "title": "citation title",
-    "include": true/false,
-    "reason": "Brief explanation of decision",
-    "confidence": "high/medium/low",
-    "pico_match": {{
-      "population": true/false,
-      "intervention": true/false,
-      "comparator": true/false,
-      "outcome": true/false
-    }}
+    "picott": {{
+      "population": "exact quote from abstract identifying population or 'Not found'",
+      "intervention": "exact quote from abstract identifying intervention or 'Not found'",
+      "comparison": "exact quote from abstract identifying comparison or 'Not found'",
+      "outcome": "exact quote from abstract identifying outcome or 'Not found'",
+      "timeframe": "exact quote from abstract identifying timeframe or 'Not found'",
+      "studyType": "exact quote from abstract identifying study type or 'Not found'"
+    }},
+    "inclusionCriteria": ["list of matched inclusion criteria with supporting quotes"],
+    "exclusionCriteria": ["list of matched exclusion criteria with supporting quotes"],
+    "reasoning": "Step-by-step reasoning for your decision",
+    "decision": "Include" or "Exclude",
+    "confidence": "high/medium/low"
   }}
 ]
 
-Focus on being thorough and consistent in your screening decisions."""
+Focus on extracting EXACT quotes that support each PICOTT element and criterion match."""
 
     # System message for research context
     system_message = """You are a professional systematic reviewer with expertise in evidence synthesis.
@@ -184,7 +190,7 @@ def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
         results_json: JSON string with screening results
         
     Returns:
-        List of parsed screening decisions
+        List of parsed screening decisions with PICOTT elements
     """
     try:
         # Extract JSON from the response
@@ -201,14 +207,33 @@ def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
         # Validate and normalize results
         normalized_results = []
         for result in results:
-            normalized_results.append({
-                "id": result.get("id", ""),
-                "title": result.get("title", ""),
-                "include": bool(result.get("include", False)),
-                "reason": result.get("reason", "No reason provided"),
-                "confidence": result.get("confidence", "medium"),
-                "pico_match": result.get("pico_match", {})
-            })
+            # Handle both old and new format
+            if "decision" in result:
+                # New PICOTT format
+                normalized_results.append({
+                    "id": result.get("id", ""),
+                    "title": result.get("title", ""),
+                    "include": result.get("decision", "Exclude") == "Include",
+                    "reason": result.get("reasoning", "No reason provided"),
+                    "confidence": result.get("confidence", "medium"),
+                    "picott": result.get("picott", {}),
+                    "inclusionCriteria": result.get("inclusionCriteria", []),
+                    "exclusionCriteria": result.get("exclusionCriteria", []),
+                    "decision": result.get("decision", "Exclude")
+                })
+            else:
+                # Old format compatibility
+                normalized_results.append({
+                    "id": result.get("id", ""),
+                    "title": result.get("title", ""),
+                    "include": bool(result.get("include", False)),
+                    "reason": result.get("reason", "No reason provided"),
+                    "confidence": result.get("confidence", "medium"),
+                    "picott": {},
+                    "inclusionCriteria": [],
+                    "exclusionCriteria": [],
+                    "decision": "Include" if result.get("include", False) else "Exclude"
+                })
             
         return normalized_results
         

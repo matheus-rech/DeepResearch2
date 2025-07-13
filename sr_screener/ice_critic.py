@@ -16,28 +16,36 @@ def analyze_screening_consistency(
     
     Args:
         screening_results: List of screening decisions
-        pico_criteria: PICO criteria used for screening
+        pico_criteria: PICOTT criteria used for screening
         
     Returns:
         Dictionary with identified issues and summary statistics
     """
     issues = []
     
-    # Analysis 1: Check for missing or incomplete PICO evaluations
+    # Analysis 1: Check for missing or incomplete PICOTT evaluations
     for result in screening_results:
-        if result.get("include") and "pico_match" in result:
-            pico_match = result["pico_match"]
-            
-            # Check if included citation matches all PICO criteria
-            if not all(pico_match.values()):
-                non_matching = [k for k, v in pico_match.items() if not v]
-                issues.append({
-                    "type": "PICO_mismatch_but_included",
-                    "citation_id": result["id"],
-                    "severity": "high",
-                    "description": f"Citation included despite not matching: {', '.join(non_matching)}",
-                    "suggestion": "Review inclusion decision - all PICO criteria should match for inclusion"
-                })
+        if result.get("include") or result.get("decision") == "Include":
+            # Check PICOTT elements completeness
+            if "picott" in result:
+                picott = result["picott"]
+                missing_elements = []
+                
+                # Check each PICOTT element that was specified in criteria
+                for element, criteria_value in pico_criteria.items():
+                    if criteria_value and criteria_value != "Not specified":
+                        element_key = element if element != "study_type" else "studyType"
+                        if element_key in picott and (not picott[element_key] or picott[element_key] == "Not found"):
+                            missing_elements.append(element)
+                
+                if missing_elements:
+                    issues.append({
+                        "type": "PICOTT_elements_missing",
+                        "citation_id": result["id"],
+                        "severity": "high",
+                        "description": f"Citation included but missing PICOTT elements: {', '.join(missing_elements)}",
+                        "suggestion": "Verify if abstract contains required PICOTT elements"
+                    })
     
     # Analysis 2: Check confidence vs decision consistency
     low_confidence_included = []

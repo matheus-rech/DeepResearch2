@@ -170,11 +170,11 @@ def show_criteria_step():
     st.header("Step 2: Define Screening Criteria")
     st.markdown("Configure your systematic review screening criteria below.")
     
-    # PICO Criteria
-    st.subheader("PICO Criteria")
+    # PICOTT Criteria
+    st.subheader("PICOTT Criteria")
     st.markdown("Define the key elements of your research question:")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         population = st.text_area(
@@ -198,6 +198,18 @@ def show_criteria_step():
             "**O**utcome",
             placeholder="e.g., Glycemic control (HbA1c levels)",
             help="What are the outcomes of interest?"
+        )
+    
+    with col3:
+        timeframe = st.text_area(
+            "**T**imeframe",
+            placeholder="e.g., Follow-up ≥ 6 months",
+            help="What is the timeframe for outcomes?"
+        )
+        study_type = st.text_area(
+            "Study **T**ype",
+            placeholder="e.g., Randomized controlled trials",
+            help="What types of studies to include?"
         )
     
     # Additional criteria
@@ -283,7 +295,9 @@ def show_criteria_step():
                     "population": population,
                     "intervention": intervention,
                     "comparator": comparator,
-                    "outcome": outcome
+                    "outcome": outcome,
+                    "timeframe": timeframe,
+                    "study_type": study_type
                 }
                 st.session_state.inclusion_criteria = inclusion_criteria
                 st.session_state.exclusion_criteria = exclusion_criteria
@@ -301,13 +315,15 @@ def show_screening_step():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**PICO Criteria:**")
+        st.markdown("**PICOTT Criteria:**")
         pico = st.session_state.pico_criteria
         st.info(f"""
-        - **P**: {pico['population']}
-        - **I**: {pico['intervention']}
-        - **C**: {pico['comparator'] or 'Not specified'}
-        - **O**: {pico['outcome']}
+        - **P**opulation: {pico['population']}
+        - **I**ntervention: {pico['intervention']}
+        - **C**omparator: {pico['comparator'] or 'Not specified'}
+        - **O**utcome: {pico['outcome']}
+        - **T**imeframe: {pico.get('timeframe', 'Not specified') or 'Not specified'}
+        - Study **T**ype: {pico.get('study_type', 'Not specified') or 'Not specified'}
         """)
     
     with col2:
@@ -430,17 +446,32 @@ def show_results_step():
                     
                     with col1:
                         st.markdown(f"**ID:** {citation['id']}")
-                        st.markdown(f"**Reason:** {citation['reason']}")
+                        st.markdown(f"**Decision Reasoning:** {citation['reason']}")
                         
-                        # PICO match details
-                        if citation.get("pico_match"):
-                            pico_match = citation["pico_match"]
-                            st.markdown("**PICO Match:**")
-                            match_text = []
-                            for component, matched in pico_match.items():
-                                emoji = "✅" if matched else "❌"
-                                match_text.append(f"{emoji} {component.capitalize()}")
-                            st.write(" | ".join(match_text))
+                        # PICOTT elements with exact citations
+                        if citation.get("picott"):
+                            st.markdown("**PICOTT Elements (with exact citations):**")
+                            picott = citation["picott"]
+                            
+                            # Display each PICOTT element with its citation
+                            for element, quote in picott.items():
+                                element_name = element.replace("studyType", "Study Type").capitalize()
+                                if quote and quote != "Not found":
+                                    st.markdown(f"- **{element_name}:** \"{quote}\"")
+                                else:
+                                    st.markdown(f"- **{element_name}:** Not found in abstract")
+                        
+                        # Inclusion criteria matches
+                        if citation.get("inclusionCriteria"):
+                            st.markdown("**Matched Inclusion Criteria:**")
+                            for criterion in citation["inclusionCriteria"]:
+                                st.markdown(f"- {criterion}")
+                        
+                        # Exclusion criteria matches (should be empty for included)
+                        if citation.get("exclusionCriteria"):
+                            st.markdown("**Matched Exclusion Criteria:**")
+                            for criterion in citation["exclusionCriteria"]:
+                                st.markdown(f"- {criterion}")
                     
                     with col2:
                         st.markdown(f"**Confidence:** {citation['confidence']}")
@@ -465,10 +496,27 @@ def show_results_step():
         # Display by reason
         for reason, citations in reason_groups.items():
             with st.expander(f"{reason} ({len(citations)} citations)"):
-                for citation in citations[:10]:  # Show first 10
-                    st.write(f"- **{citation['id']}**: {citation['title'][:80]}...")
-                if len(citations) > 10:
-                    st.write(f"... and {len(citations) - 10} more")
+                for citation in citations[:5]:  # Show first 5 with details
+                    with st.container():
+                        st.markdown(f"**{citation['id']}**: {citation['title'][:80]}...")
+                        
+                        # Show exclusion criteria that were matched
+                        if citation.get("exclusionCriteria"):
+                            st.markdown("**Matched Exclusion Criteria:**")
+                            for criterion in citation["exclusionCriteria"]:
+                                st.markdown(f"- {criterion}")
+                        
+                        # Show PICOTT elements for context
+                        if citation.get("picott") and st.checkbox(f"Show PICOTT elements", key=f"picott_{citation['id']}"):
+                            for element, quote in citation["picott"].items():
+                                if quote and quote != "Not found":
+                                    element_name = element.replace("studyType", "Study Type").capitalize()
+                                    st.markdown(f"- **{element_name}:** \"{quote[:100]}...\"" if len(quote) > 100 else f"- **{element_name}:** \"{quote}\"")
+                        
+                        st.divider()
+                        
+                if len(citations) > 5:
+                    st.write(f"... and {len(citations) - 5} more citations")
     
     with tab3:
         st.subheader("ICE Analysis (Internal Consistency Evaluation)")
@@ -511,16 +559,26 @@ def show_results_step():
     with tab4:
         st.subheader("Export Results")
         
-        # Prepare export data
+        # Run ICE analysis automatically for export
+        ice_results = ice_critic.analyze_screening_consistency(
+            results["results"],
+            st.session_state.pico_criteria
+        )
+        
+        # Prepare comprehensive export data
         export_data = {
             "screening_date": st.session_state.screening_timestamp.isoformat(),
             "criteria": {
-                "pico": st.session_state.pico_criteria,
+                "picott": st.session_state.pico_criteria,
                 "inclusion": st.session_state.inclusion_criteria,
                 "exclusion": st.session_state.exclusion_criteria
             },
             "statistics": stats,
-            "results": results["results"]
+            "results": results["results"],
+            "ice_analysis": {
+                "issues": ice_results["issues"],
+                "summary": ice_results["summary"]
+            }
         }
         
         # Export options
