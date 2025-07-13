@@ -115,7 +115,7 @@ Document your reasoning clearly for transparency and potential appeals."""
                     }
                 }
             ],
-            mode="background"  # Use background mode as recommended
+            background=True  # Use background mode as recommended
         )
         
         logger.info(f"Launched screening job: {response.id}")

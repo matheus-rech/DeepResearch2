@@ -264,8 +264,9 @@ python main.py sr-ui
        - Fallback 1: `response.message.content[0].text` (legacy format)
        - Fallback 2: `response.output_text` (platform docs format)
     3. **Added required tool**: Added `web_search_preview` tool alongside MCP tool (Deep Research requires at least one data source)
+    4. **Fixed background parameter**: Changed `mode="background"` to `background=True` to match API specification
   - **Response Structure**: Deep Research responses include intermediate steps (web searches, reasoning, MCP calls) in the `output` array, with the final answer as the last element
-  - **Background Mode**: Correctly implemented async polling for background mode jobs
+  - **Background Mode**: Correctly implemented async polling for background mode jobs using `background=True` parameter
   - **Compatibility**: Code now handles multiple response formats to ensure robustness across API versions
 
 - **July 13, 2025**: Implemented Native PubMed Export Formats

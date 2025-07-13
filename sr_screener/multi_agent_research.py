@@ -232,7 +232,7 @@ class MultiAgentScreener:
                     }
                 }
             ],
-            mode="background"  # Use background mode as recommended
+            background=True  # Use background mode as recommended
         )
         
         # Poll for results since we're using background mode
