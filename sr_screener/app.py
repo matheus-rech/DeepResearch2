@@ -23,7 +23,7 @@ from sqlalchemy import func
 load_dotenv()
 
 # Configuration
-MCP_URL = os.getenv("MCP_URL", "http://localhost:8001/sse/")
+MCP_URL = os.getenv("MCP_URL", "https://8001-{}.replit.app/sse/".format(os.getenv("REPL_ID", "localhost")))
 
 # Page configuration
 st.set_page_config(

@@ -212,7 +212,7 @@ def main(port=8000):
     logger.info("Server will be accessible via SSE transport")
     
     # Start server with SSE transport
-    server.run(transport="sse", port=port)
+    server.run(transport="sse", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
