@@ -221,7 +221,15 @@ def show_upload_step():
 
         # Get citations from database
         with db.get_db() as database:
-            citations_query = database.query(db.Citation).limit(100).all()  # Limit for performance
+            # Get total count first
+            total_count = database.query(db.Citation).count()
+            
+            # Only limit if we have a very large corpus (>1000) for UI performance
+            if total_count > 1000:
+                st.info(f"Showing first 1000 of {total_count} citations for browsing. All citations will be included in screening.")
+                citations_query = database.query(db.Citation).limit(1000).all()
+            else:
+                citations_query = database.query(db.Citation).all()
 
             if citations_query:
                 # Convert to DataFrame for easier handling

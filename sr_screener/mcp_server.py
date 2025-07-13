@@ -5,7 +5,7 @@ Implements search and fetch tools for Deep Research integration
 """
 import os
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from fastmcp import FastMCP
 import database as db
@@ -36,7 +36,7 @@ def create_server():
     mcp = FastMCP("Systematic Review MCP Server", instructions=server_instructions)
     
     @mcp.tool()
-    async def search(query: str, limit: int = 10000, mode: str = "fulltext") -> Dict[str, List[Dict[str, Any]]]:
+    async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, List[Dict[str, Any]]]:
         """
         Search for citations in the systematic review corpus.
         
@@ -48,7 +48,7 @@ def create_server():
             query: Search query string. Natural language queries work best.
                    Examples: "randomized controlled trials diabetes", 
                             "spinal cord injury rehabilitation"
-            limit: Maximum number of results to return (default: 10000 to ensure all citations available)
+            limit: Maximum number of results to return (default: None - returns all matching citations)
             mode: Search mode - "fulltext" for keyword search or "semantic" for embedding-based search
         
         Returns:

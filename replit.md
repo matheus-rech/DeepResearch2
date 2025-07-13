@@ -254,6 +254,17 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Removed Citation Limits for Comprehensive Screening
+  - **Issue Fixed**: Previous implementation had hard limits on citation retrieval that could prevent comprehensive screening
+  - **Changes Made**:
+    - MCP Server `search()` tool: Changed default limit from 10,000 to None (unlimited)
+    - Database `get_all_citations()`: Changed default limit from 10,000 to None
+    - Database `search_citations()`: Changed default limit from 10,000 to None  
+    - Database `semantic_search_citations()`: Changed default limit from 100 to None (was particularly restrictive)
+    - UI citation browser: Now shows up to 1,000 citations for browsing but clarifies all will be screened
+  - **Impact**: Systematic reviews can now process unlimited citations without artificial constraints
+  - **Note**: For UI performance, browsing is limited to 1,000 citations, but screening always processes the full corpus
+
 - **July 13, 2025**: Added Vector Embeddings for Semantic Search
   - **Database Enhancement**: Integrated PostgreSQL pgvector extension for semantic search
     - Added embedding column to citations table for storing OpenAI embeddings

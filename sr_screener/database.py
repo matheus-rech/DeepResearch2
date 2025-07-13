@@ -202,17 +202,18 @@ def bulk_insert_citations(df: pd.DataFrame):
         return stats
 
 
-def search_citations(query: str, limit: int = 10000) -> List[Dict[str, Any]]:
+def search_citations(query: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Search citations using full-text search.
     Returns list of matching citations with snippets.
     
-    Note: Default limit increased to 10000 to ensure all citations can be screened.
+    Note: By default returns all matching citations (no limit).
     """
     with get_db() as db:
         if 'postgresql' in str(engine.url):
             # PostgreSQL full-text search
-            results = db.execute(text("""
+            limit_clause = f"LIMIT {limit}" if limit is not None else ""
+            results = db.execute(text(f"""
                 SELECT 
                     id, 
                     title,
@@ -229,12 +230,13 @@ def search_citations(query: str, limit: int = 10000) -> List[Dict[str, Any]]:
                 WHERE to_tsvector('english', coalesce(title, '') || ' ' || coalesce(abstract, '')) 
                       @@ plainto_tsquery('english', :query)
                 ORDER BY relevance DESC
-                LIMIT :limit
-            """), {"query": query, "limit": limit})
+                {limit_clause}
+            """), {"query": query})
         else:
             # SQLite fallback - simple LIKE search
             search_pattern = f"%{query}%"
-            results = db.execute(text("""
+            limit_clause = f"LIMIT {limit}" if limit is not None else ""
+            results = db.execute(text(f"""
                 SELECT 
                     id, 
                     title,
@@ -246,8 +248,8 @@ def search_citations(query: str, limit: int = 10000) -> List[Dict[str, Any]]:
                     1.0 as relevance
                 FROM citations
                 WHERE title LIKE :pattern OR abstract LIKE :pattern
-                LIMIT :limit
-            """), {"pattern": search_pattern, "limit": limit})
+                {limit_clause}
+            """), {"pattern": search_pattern})
         
         citations = []
         for row in results:
@@ -290,19 +292,22 @@ def fetch_citation(citation_id: str) -> Optional[Dict[str, Any]]:
         }
 
 
-def get_all_citations(limit: int = 10000) -> List[Dict[str, Any]]:
+def get_all_citations(limit: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Get all citations from the database (no search filtering).
     Used for comprehensive systematic review screening.
     
     Args:
-        limit: Maximum number of citations to return (default: 10000)
+        limit: Maximum number of citations to return (default: None - returns all citations)
         
     Returns:
         List of all citations with basic metadata
     """
     with get_db() as db:
-        results = db.query(Citation).limit(limit).all()
+        query = db.query(Citation)
+        if limit is not None:
+            query = query.limit(limit)
+        results = query.all()
         
         citations = []
         for citation in results:
@@ -422,13 +427,13 @@ def generate_citation_embeddings():
     return stats
 
 
-def semantic_search_citations(query: str, limit: int = 100) -> List[Dict[str, Any]]:
+def semantic_search_citations(query: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Search citations using semantic similarity with embeddings.
     
     Args:
         query: Search query text
-        limit: Maximum number of results
+        limit: Maximum number of results (default: None - returns all matching citations)
         
     Returns:
         List of citations sorted by semantic similarity
@@ -448,15 +453,16 @@ def semantic_search_citations(query: str, limit: int = 100) -> List[Dict[str, An
         embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
         
         # Semantic similarity search using cosine distance
-        results = db.execute(text("""
+        limit_clause = f"LIMIT {limit}" if limit is not None else ""
+        results = db.execute(text(f"""
             SELECT 
                 id, title, abstract, year, journal, doi, authors, mesh_terms, keywords,
                 1 - (embedding <=> :query_embedding::vector) as similarity
             FROM citations
             WHERE embedding IS NOT NULL
             ORDER BY embedding <=> :query_embedding::vector
-            LIMIT :limit
-        """), {"query_embedding": embedding_str, "limit": limit})
+            {limit_clause}
+        """), {"query_embedding": embedding_str})
         
         citations = []
         for row in results:
