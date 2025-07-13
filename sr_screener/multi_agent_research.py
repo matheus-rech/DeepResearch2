@@ -227,9 +227,9 @@ class MultiAgentScreener:
                 },
                 {
                     "type": "mcp",
-                    "server": {
-                        "url": self.mcp_url
-                    }
+                    "server_label": "systematic_review_citations",
+                    "server_url": self.mcp_url,
+                    "require_approval": "never"
                 }
             ],
             background=True  # Use background mode as recommended

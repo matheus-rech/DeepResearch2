@@ -110,9 +110,9 @@ Document your reasoning clearly for transparency and potential appeals."""
                 },
                 {
                     "type": "mcp",
-                    "server": {
-                        "url": mcp_url
-                    }
+                    "server_label": "systematic_review_citations",
+                    "server_url": mcp_url,
+                    "require_approval": "never"
                 }
             ],
             background=True  # Use background mode as recommended
