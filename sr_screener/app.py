@@ -6,7 +6,6 @@ import streamlit as st
 import pandas as pd
 import json
 import os
-import threading
 import time
 from datetime import datetime
 from dotenv import load_dotenv
@@ -525,44 +524,82 @@ def show_screening_step():
 
     with col4:
         if st.button("🚀 Start Screening", type="primary", use_container_width=True):
-            # Create a placeholder for progress updates
-            progress_placeholder = st.empty()
-
-            # Run screening in a separate thread to keep UI responsive
-            def run_screening():
+            # Capture session state values before processing
+            pico_criteria = st.session_state.get('pico_criteria', {})
+            inclusion_criteria = st.session_state.get('inclusion_criteria', [])
+            exclusion_criteria = st.session_state.get('exclusion_criteria', [])
+            use_multi_agent = st.session_state.get('use_multi_agent', False)
+            
+            # Validate criteria exist
+            if not pico_criteria:
+                st.error("No PICO criteria found! Please complete the criteria step first.")
+                return
+            
+            # Create a container for progress updates
+            progress_container = st.container()
+            progress_placeholder = progress_container.empty()
+            
+            # Show initial progress
+            progress_placeholder.info("🚀 Starting screening process...")
+            
+            try:
+                # Define progress callback that works with Streamlit
                 def update_progress(message):
-                    progress_placeholder.info(f"🔄 {message}")
-
-                try:
+                    # Parse message for progress info
+                    if "Launch" in message:
+                        progress_placeholder.info(f"🚀 {message}")
+                    elif "Poll" in message or "progress" in message.lower():
+                        progress_placeholder.info(f"⏳ {message}")
+                    elif "Complete" in message or "Success" in message:
+                        progress_placeholder.success(f"✅ {message}")
+                    elif "Error" in message or "Failed" in message:
+                        progress_placeholder.error(f"❌ {message}")
+                    else:
+                        progress_placeholder.info(f"🔄 {message}")
+                
+                # Show screening mode
+                mode = "multi-agent" if use_multi_agent else "single-agent"
+                progress_placeholder.info(f"Starting {mode} screening process...")
+                
+                # Run screening directly (no threading)
+                with st.spinner("Screening in progress... This may take several minutes."):
                     results = run_systematic_screening(
-                        st.session_state.pico_criteria,
-                        st.session_state.inclusion_criteria,
-                        st.session_state.exclusion_criteria,
+                        pico_criteria,
+                        inclusion_criteria,
+                        exclusion_criteria,
                         stats['total_citations'],
                         MCP_URL,
                         callback=update_progress,
-                        use_multi_agent=st.session_state.get('use_multi_agent', False)
+                        use_multi_agent=use_multi_agent
                     )
-
-                    # Save results
-                    st.session_state.screening_results = results
-                    st.session_state.screening_timestamp = datetime.now()
-
-                    progress_placeholder.success("✅ Screening completed!")
-                    st.session_state.current_step = "results"
-                    st.rerun()
-
-                except Exception as e:
-                    progress_placeholder.error(f"❌ Screening failed: {str(e)}")
+                
+                # Validate results
+                if not results or "included_citations" not in results:
+                    raise ValueError("Invalid screening results received")
+                
+                # Save results to session state
+                st.session_state.screening_results = results
+                st.session_state.screening_timestamp = datetime.now()
+                
+                # Show success message
+                progress_placeholder.success(f"✅ Screening completed! Found {results['statistics']['included']} relevant citations.")
+                time.sleep(2)  # Brief pause to show success message
+                
+                # Navigate to results
+                st.session_state.current_step = "results"
+                st.rerun()
+                
+            except Exception as e:
+                error_msg = str(e)
+                if "API" in error_msg or "key" in error_msg.lower():
+                    progress_placeholder.error("❌ API Key Error: Please check your OpenAI API key in secrets")
+                elif "connection" in error_msg.lower():
+                    progress_placeholder.error("❌ Connection Error: Please check MCP server is running on port 8001")
+                else:
+                    progress_placeholder.error(f"❌ Screening failed: {error_msg}")
+                
+                with st.expander("Error Details"):
                     st.exception(e)
-
-            # Start screening
-            screening_thread = threading.Thread(target=run_screening)
-            screening_thread.start()
-
-            # Show spinner while thread is running
-            with st.spinner("Screening in progress... This may take several minutes."):
-                screening_thread.join()
 
 
 def show_results_step():
