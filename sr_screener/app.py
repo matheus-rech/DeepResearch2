@@ -426,8 +426,20 @@ def show_upload_step():
 
                 st.write(f"Showing {len(filtered_df)} of {len(df)} citations")
 
-                # Display citations (show first 10)
-                display_count = min(10, len(filtered_df))
+                # Let user control how many citations to display
+                if len(filtered_df) > 10:
+                    display_count = st.selectbox(
+                        "Number of citations to display:",
+                        options=[10, 25, 50, 100, "All"],
+                        format_func=lambda x: f"Show {x} citations" if x != "All" else f"Show all {len(filtered_df)} citations",
+                        key="citation_display_count"
+                    )
+                    if display_count == "All":
+                        display_count = len(filtered_df)
+                else:
+                    display_count = len(filtered_df)
+
+                # Display citations
                 for idx, citation in filtered_df.head(display_count).iterrows():
                     with st.expander(f"📄 {citation['title'][:80]}... ({citation['year'] if pd.notna(citation['year']) else 'No year'})"):
                         col1, col2 = st.columns([3, 1])
@@ -458,8 +470,7 @@ def show_upload_step():
                                 except (json.JSONDecodeError, TypeError):
                                     st.markdown(f"**Authors:** {citation['authors'][:50]}...")
 
-                if len(filtered_df) > display_count:
-                    st.info(f"Showing first {display_count} citations. Use search to narrow results.")
+                # Remove the hardcoded message since user now controls display count
 
                 # Continue button
                 st.divider()
