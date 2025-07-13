@@ -188,16 +188,16 @@ def create_server():
     return mcp
 
 
-def main():
+def main(port=8000):
     """Main function to start the MCP server."""
     server = create_server()
     
     # Log server info
-    logger.info("Starting Systematic Review MCP server on 0.0.0.0:8000")
+    logger.info(f"Starting Systematic Review MCP server on 0.0.0.0:{port}")
     logger.info("Server will be accessible via SSE transport")
     
     # Start server with SSE transport
-    server.run(transport="sse")
+    server.run(transport="sse", port=port)
 
 
 if __name__ == "__main__":

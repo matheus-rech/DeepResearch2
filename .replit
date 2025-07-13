@@ -23,7 +23,7 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py sr-ui"
-waitForPort = 5000
+waitForPort = 8000
 
 [[ports]]
 localPort = 5000
@@ -32,6 +32,10 @@ externalPort = 5000
 [[ports]]
 localPort = 8000
 externalPort = 80
+
+[[ports]]
+localPort = 8001
+externalPort = 3001
 exposeLocalhost = true
 
 [[ports]]

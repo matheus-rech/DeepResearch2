@@ -14,20 +14,20 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 def run_mcp_server():
     """Start the MCP server."""
-    print("Starting MCP server on http://0.0.0.0:8000/sse/")
+    print("Starting MCP server on http://0.0.0.0:8001/sse/")
     print("This server provides search/fetch tools for Deep Research integration")
     print("Press Ctrl+C to stop")
     
     import mcp_server
-    mcp_server.main()
+    mcp_server.main(port=8001)
 
 
 def run_streamlit_app():
     """Start the Streamlit UI."""
-    print("Starting Streamlit app...")
+    print("Starting Streamlit app on port 8000...")
     app_path = Path(__file__).parent / "app.py"
     subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path), 
-                   "--server.port", "5000", "--server.address", "0.0.0.0"])
+                   "--server.port", "8000", "--server.address", "0.0.0.0"])
 
 
 def run_both():
@@ -35,14 +35,14 @@ def run_both():
     import threading
     import time
     
-    # Start MCP server in a thread
+    # Start MCP server in a thread (on port 8001)
     mcp_thread = threading.Thread(target=run_mcp_server, daemon=True)
     mcp_thread.start()
     
     # Give MCP server time to start
     time.sleep(2)
     
-    # Run Streamlit in main thread
+    # Run Streamlit in main thread (on port 8000)
     run_streamlit_app()
 
 

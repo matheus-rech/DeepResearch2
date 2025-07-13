@@ -25,7 +25,7 @@ def launch_screening_job(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8000/sse/"
+    mcp_url: str = "http://localhost:8001/sse/"
 ) -> str:
     """
     Launch a deep research screening job for systematic review.
@@ -223,7 +223,7 @@ def run_systematic_screening(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8000/sse/",
+    mcp_url: str = "http://localhost:8001/sse/",
     callback=None
 ) -> Dict[str, Any]:
     """
