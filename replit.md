@@ -254,6 +254,23 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Implemented Native PubMed Export Formats
+  - **New Feature**: Added comprehensive PubMed-compatible export functionality
+  - **Export Formats Supported**:
+    - **Summary (text)**: NLM citation style for bibliographies (e.g., "Smith J, Jones M. Title. J Med. 2023;45(3):123-134.")
+    - **PubMed Format**: Full MEDLINE format with structured metadata fields (PMID, TI, AB, AU, etc.)
+    - **PMID List**: Simple list of PubMed IDs for batch operations
+    - **Abstract (text)**: Full abstracts with complete citation details
+    - **CSV**: Spreadsheet-compatible format with all citation fields
+    - **.nbib**: Citation manager format compatible with EndNote, Mendeley, Zotero
+  - **UI Enhancement**: New export interface with:
+    - Citation set selection (included only, excluded only, or all)
+    - Format dropdown with all PubMed-native options
+    - Preview capability for text formats
+    - Export summary with statistics
+  - **Integration**: Works seamlessly with screening results, preserving all metadata
+  - **Benefits**: Allows researchers to export results in familiar PubMed formats for integration with existing workflows
+
 - **July 13, 2025**: Fixed NaN JSON Errors and Integrated CrossRef API for Abstract Enrichment
   - **Bug Fixed**: Resolved JSON parsing errors caused by NaN values in citation data
   - **Root Cause**: Python's NaN values are not valid JSON and were causing database insertion failures

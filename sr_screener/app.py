@@ -15,6 +15,8 @@ import database as db
 from deep_research import run_systematic_screening
 import ice_critic
 from data_validator import CitationValidator
+from pubmed_export import export_citations
+from multi_agent_research import run_multi_agent_screening
 
 # Load environment variables
 load_dotenv()
@@ -1023,59 +1025,149 @@ def show_results_step():
             st.session_state.pico_criteria
         )
 
-        # Prepare comprehensive export data
-        export_data = {
-            "screening_date": st.session_state.screening_timestamp.isoformat(),
-            "criteria": {
-                "picott": st.session_state.pico_criteria,
-                "inclusion": st.session_state.inclusion_criteria,
-                "exclusion": st.session_state.exclusion_criteria
-            },
-            "statistics": stats,
-            "results": results["results"],
-            "ice_analysis": {
-                "issues": ice_results["issues"],
-                "summary": ice_results["summary"]
+        # Export section with PubMed formats
+        st.markdown("### Export Included Citations")
+        
+        # Citation selection
+        export_set = st.radio(
+            "Select citations to export:",
+            ["Included citations only", "Excluded citations only", "All citations"],
+            index=0
+        )
+        
+        # PubMed export formats
+        export_format = st.selectbox(
+            "Export format:",
+            [
+                "PubMed Summary (text)",
+                "PubMed Format",
+                "PMID List",
+                "Abstract (text)",
+                "CSV",
+                "Citation Manager (.nbib)",
+                "JSON (Full screening data)",
+                "PRISMA Flow Data"
+            ],
+            help="Choose from native PubMed export formats or comprehensive screening data"
+        )
+        
+        # Prepare citations for export based on selection
+        if export_set == "Included citations only":
+            citations_to_export = []
+            for result in results["results"]:
+                if result["decision"] == "include":
+                    # Fetch full citation details
+                    citation = db.fetch_citation(result["citation_id"])
+                    if citation:
+                        citations_to_export.append(citation)
+        elif export_set == "Excluded citations only":
+            citations_to_export = []
+            for result in results["results"]:
+                if result["decision"] == "exclude":
+                    citation = db.fetch_citation(result["citation_id"])
+                    if citation:
+                        citations_to_export.append(citation)
+        else:  # All citations
+            citations_to_export = []
+            for result in results["results"]:
+                citation = db.fetch_citation(result["citation_id"])
+                if citation:
+                    citations_to_export.append(citation)
+        
+        # Generate export based on format
+        if export_format == "JSON (Full screening data)":
+            # Comprehensive export data
+            export_data = {
+                "screening_date": st.session_state.screening_timestamp.isoformat(),
+                "criteria": {
+                    "picott": st.session_state.pico_criteria,
+                    "inclusion": st.session_state.inclusion_criteria,
+                    "exclusion": st.session_state.exclusion_criteria
+                },
+                "statistics": stats,
+                "results": results["results"],
+                "ice_analysis": {
+                    "issues": ice_results["issues"],
+                    "summary": ice_results["summary"]
+                }
             }
-        }
-
-        # Export options
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            # JSON export
-            st.download_button(
-                label="📥 Download JSON",
-                data=json.dumps(export_data, indent=2),
-                file_name=f"screening_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
-
-        with col2:
-            # CSV export for included citations
-            included_df = pd.DataFrame(results["included_citations"])
-            csv = included_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Included (CSV)",
-                data=csv,
-                file_name=f"included_citations_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
-            )
-
-        with col3:
+            content = json.dumps(export_data, indent=2)
+            filename = f"screening_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            mime_type = "application/json"
+            
+        elif export_format == "PRISMA Flow Data":
             # PRISMA flow diagram data
             prisma_data = {
                 "identification": stats["total_screened"],
                 "screening": stats["total_screened"],
                 "included": stats["included"],
-                "excluded": stats["excluded"]
+                "excluded": stats["excluded"],
+                "exclusion_reasons": {}
             }
+            
+            # Count exclusion reasons
+            for result in results["results"]:
+                if result["decision"] == "exclude":
+                    reason = result.get("reason", "Not specified")
+                    if reason not in prisma_data["exclusion_reasons"]:
+                        prisma_data["exclusion_reasons"][reason] = 0
+                    prisma_data["exclusion_reasons"][reason] += 1
+            
+            content = json.dumps(prisma_data, indent=2)
+            filename = f"prisma_flow_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            mime_type = "application/json"
+            
+        else:
+            # PubMed format exports
+            format_map = {
+                "PubMed Summary (text)": "summary",
+                "PubMed Format": "pubmed",
+                "PMID List": "pmid",
+                "Abstract (text)": "abstract",
+                "CSV": "csv",
+                "Citation Manager (.nbib)": "nbib"
+            }
+            
+            format_key = format_map.get(export_format)
+            if format_key and citations_to_export:
+                content, filename, mime_type = export_citations(citations_to_export, format_key)
+            else:
+                st.warning("No citations available for export in the selected set.")
+                content = ""
+                filename = "empty_export.txt"
+                mime_type = "text/plain"
+        
+        # Download button
+        if content:
             st.download_button(
-                label="📥 PRISMA Data",
-                data=json.dumps(prisma_data, indent=2),
-                file_name=f"prisma_flow_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
+                label=f"📥 Download {export_format}",
+                data=content,
+                file_name=filename,
+                mime=mime_type,
+                use_container_width=True
             )
+            
+            # Show preview for text formats
+            if mime_type == "text/plain" and len(content) < 5000:
+                with st.expander("Preview export content"):
+                    st.text(content[:2000] + "..." if len(content) > 2000 else content)
+        
+        # Additional export info
+        st.divider()
+        st.info(f"""
+        **Export Summary:**
+        - Format: {export_format}
+        - Citations: {len(citations_to_export)} {export_set.lower()}
+        - Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        
+        **PubMed Format Notes:**
+        - Summary (text): NLM citation style, suitable for bibliographies
+        - PubMed Format: MEDLINE format with full metadata
+        - PMID List: Simple list of PubMed IDs for batch operations
+        - Abstract (text): Full abstracts with citation details
+        - CSV: Spreadsheet-compatible format with all fields
+        - .nbib: Compatible with EndNote, Mendeley, Zotero, etc.
+        """)
 
     # Navigation
     st.divider()
