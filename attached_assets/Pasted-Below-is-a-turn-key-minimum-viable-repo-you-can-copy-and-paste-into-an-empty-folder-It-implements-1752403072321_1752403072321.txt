@@ -1,0 +1,499 @@
+Below is a turn‑key “minimum viable repo” you can copy‑and‑paste into an empty folder.
+It implements:
+	•	Streamlit UI for uploading PubMed/Embase citation files, launching the screening job, watching progress, and downloading results.
+	•	FastAPI MCP server that exposes the upload as a searchable /search + /fetch corpus for Deep‑Research.
+	•	SQLite + FTS5 store for fast full‑text title/abstract search.
+	•	Parsers for PubMed XML, RIS, and generic CSV.
+	•	A stub that shows how to call o3‑deep‑research (you add your OPENAI_API_KEY).
+	•	ICE placeholder to critique the reasoning trace (one function; expand later).
+
+⸻
+
+0 File tree
+
+neurosurg_sr/
+├─ app.py                 # Streamlit front‑end
+├─ mcp_server.py          # FastAPI MCP implementation
+├─ parsers.py             # XML/RIS/CSV → DataFrame utilities
+├─ deep_research.py       # wrapper to launch & poll o3‑deep‑research
+├─ ice_critic.py          # minimal ICE critique stub
+├─ database.py            # SQLite helpers (FTS5 setup, CRUD)
+├─ requirements.txt
+├─ docker-compose.yml     # optional one‑command run
+└─ .env.example           # copy → .env with your OPENAI_API_KEY
+
+You may of course merge files or restructure; they are separated for clarity.
+
+⸻
+
+1 requirements.txt
+
+# Core
+streamlit>=1.34
+fastapi>=0.111
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0
+pandas>=2.2
+python-dotenv>=1.0
+
+# Parsing
+lxml>=5.2          # PubMed XML faster than built‑in xml.etree
+rispy>=0.7
+python-dateutil>=2.9
+
+# Async HTTP (for OpenAI polling; optional if you sync‑block)
+httpx>=0.27
+
+# OpenAI SDK
+openai>=1.26
+
+# (Optional) progress bar in terminal
+tqdm>=4.66
+
+
+⸻
+
+2 database.py
+
+# database.py
+import json, sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+import pandas as pd
+
+DB_PATH = Path("citations.db")
+
+INIT_SQL = """
+PRAGMA journal_mode=WAL;
+
+CREATE TABLE IF NOT EXISTS citations (
+  id           TEXT PRIMARY KEY,
+  title        TEXT,
+  abstract     TEXT,
+  year         INTEGER,
+  mesh_terms   TEXT,        -- JSON string
+  raw          TEXT         -- original JSON
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS citations_fts
+USING fts5(title, abstract, content='citations', content_rowid='rowid');
+"""
+
+@contextmanager
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+def init_db():
+    with get_conn() as conn:
+        conn.executescript(INIT_SQL)
+
+def bulk_insert(df: pd.DataFrame):
+    """
+    df columns: id, title, abstract, year, mesh_terms (list|None), raw (dict)
+    """
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.executemany(
+            "INSERT OR REPLACE INTO citations VALUES (?,?,?,?,?,?)",
+            [
+                (
+                    row.id,
+                    row.title,
+                    row.abstract,
+                    int(row.year) if row.year else None,
+                    json.dumps(row.mesh_terms) if row.mesh_terms else None,
+                    json.dumps(row.raw, default=str),
+                )
+                for row in df.itertuples()
+            ],
+        )
+        conn.commit()
+        # Rebuild FTS
+        cur.execute("DELETE FROM citations_fts;")
+        cur.execute(
+            """
+            INSERT INTO citations_fts(rowid, title, abstract)
+            SELECT rowid, title, abstract FROM citations
+            """
+        )
+        conn.commit()
+
+def search(query: str, k: int = 100):
+    with get_conn() as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT id, title,
+                   snippet(citations_fts, 1, '<b>', '</b>', ' … ', 10) AS snippet
+            FROM citations_fts
+            WHERE citations_fts MATCH ?
+            LIMIT ?
+            """,
+            (query, k),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+def fetch(doc_id: str):
+    with get_conn() as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM citations WHERE id = ?", (doc_id,)
+        ).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["mesh_terms"] = json.loads(d["mesh_terms"]) if d["mesh_terms"] else None
+        d["raw"] = json.loads(d["raw"])
+        return d
+
+
+⸻
+
+3 parsers.py
+
+# parsers.py
+from typing import List, Dict
+import pandas as pd, xml.etree.ElementTree as ET, rispy, io, csv, json
+from dateutil import parser as date_parser
+
+def _norm_year(dtstr):
+    try:
+        return date_parser.parse(dtstr).year
+    except Exception:
+        return None
+
+def parse_pubmed_xml(file_obj) -> pd.DataFrame:
+    """
+    Accepts a file‑like object (BytesIO or open file handle).
+    Returns DataFrame with columns id, title, abstract, year, mesh_terms, raw
+    """
+    tree = ET.parse(file_obj)
+    root = tree.getroot()
+    rows: List[Dict] = []
+    for art in root.findall(".//PubmedArticle"):
+        pmid = art.findtext(".//PMID")
+        title = art.findtext(".//ArticleTitle")
+        abstract = " ".join(
+            part.text or "" for part in art.findall(".//Abstract/AbstractText")
+        ).strip()
+        year = art.findtext(".//PubDate/Year") or art.findtext(".//DateCompleted/Year")
+        mesh = [m.text for m in art.findall(".//MeshHeading/DescriptorName")]
+        rows.append(
+            dict(
+                id=f"PMID:{pmid}",
+                title=title,
+                abstract=abstract,
+                year=_norm_year(year),
+                mesh_terms=mesh,
+                raw=ET.tostring(art, encoding="unicode"),
+            )
+        )
+    return pd.DataFrame(rows)
+
+def parse_ris(file_obj) -> pd.DataFrame:
+    entries = rispy.load(file_obj)
+    rows = []
+    for e in entries:
+        rows.append(
+            dict(
+                id=e.get("id") or e.get("url") or e.get("doi"),
+                title=e.get("title"),
+                abstract=e.get("abstract"),
+                year=_norm_year(str(e.get("year"))),
+                mesh_terms=None,
+                raw=e,
+            )
+        )
+    return pd.DataFrame(rows)
+
+def parse_csv(file_obj) -> pd.DataFrame:
+    df = pd.read_csv(file_obj)
+    # Expect standard named columns — adapt if your export differs
+    required = {"id", "title", "abstract"}
+    if not required.issubset(df.columns):
+        raise ValueError(f"CSV must contain {required}")
+    df["year"] = df.get("year", None)
+    df["mesh_terms"] = None
+    df["raw"] = df.apply(lambda r: r.to_dict(), axis=1)
+    return df[["id", "title", "abstract", "year", "mesh_terms", "raw"]]
+
+
+⸻
+
+4 mcp_server.py
+
+# mcp_server.py
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
+import database as db
+
+app = FastAPI(title="Ephemeral MCP for SR screening")
+
+class SearchPayload(BaseModel):
+    query: str
+    filters: dict | None = None   # Reserved, not used yet
+    k: int = 100
+
+class FetchPayload(BaseModel):
+    id: str
+
+@app.post("/search")
+async def search(payload: SearchPayload):
+    results = db.search(payload.query, payload.k)
+    return results
+
+@app.post("/fetch")
+async def fetch(payload: FetchPayload):
+    doc = db.fetch(payload.id)
+    if not doc:
+        raise HTTPException(404, detail="id not found")
+    return {
+        "url": f"https://pubmed.ncbi.nlm.nih.gov/{payload.id.lstrip('PMID:')}/",
+        "html": f"<h1>{doc['title']}</h1><p>{doc['abstract']}</p>",
+        "metadata": {
+            "year": doc["year"],
+            "mesh_terms": doc["mesh_terms"],
+        },
+    }
+
+Run locally:
+
+uvicorn mcp_server:app --port 8000 --reload
+
+
+⸻
+
+5 deep_research.py
+
+Replace "YOUR_OPENAI_API_KEY" or load from environment.
+
+# deep_research.py
+import os, time, json, httpx
+from openai import OpenAI
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "YOUR_OPENAI_API_KEY")
+MODEL = "o3-deep-research"
+
+client = OpenAI(api_key=OPENAI_API_KEY, timeout=3600)
+
+def launch_screening_job(pico_dict, corpus_size, mcp_url):
+    task = f"""
+You are screening a fixed corpus of {corpus_size} neurosurgical titles and abstracts
+already provided through the MCP.
+
+INCLUDE only if ALL the following criteria match (PRISMA‑PICO):
+- Population: {pico_dict['population']}
+- Intervention: {pico_dict['intervention']}
+- Comparator:  {pico_dict['comparator']}
+- Outcomes:    {pico_dict['outcome']}
+
+Additional:
+- Study design: RCT or prospective cohort
+- English language
+- Year ≥ 2015
+
+Return JSON list:
+  id, title, include(bool), reason_excluded
+"""
+    resp = client.responses.create(
+        model=MODEL,
+        background=True,
+        reasoning={"summary": "auto"},
+        tools=[
+            {
+                "type": "mcp",
+                "server_label": "local_corpus",
+                "server_url": mcp_url,
+                "require_approval": "never",
+            }
+        ],
+        input=task,
+    )
+    return resp.id  # job_id
+
+def poll_until_done(job_id, sleep=5):
+    while True:
+        r = client.responses.retrieve(job_id)
+        if r.status == "completed":
+            return r.message.content[0].text   # output_text
+        elif r.status == "failed":
+            raise RuntimeError(r.error)
+        time.sleep(sleep)
+
+
+⸻
+
+6 ice_critic.py  (very small stub — expand later)
+
+# ice_critic.py
+import json, re
+
+def critique(output_json_str: str):
+    """
+    Very naive example: flag items with include==True but missing 'sample size'
+    in abstract.
+    """
+    studies = json.loads(output_json_str)
+    flags = []
+    for s in studies:
+        if s["include"]:
+            if not re.search(r"\bsample size\b|\bn=\d+", s.get("title", "") + s.get("abstract","")):
+                flags.append(
+                    {
+                        "id": s["id"],
+                        "issue": "No sample size mention",
+                        "severity": "minor",
+                        "suggestion": "Verify in full text",
+                    }
+                )
+    return flags
+
+
+⸻
+
+7 app.py  (Streamlit UI)
+
+# app.py
+import streamlit as st, pandas as pd, json, os, threading, requests, time
+from dotenv import load_dotenv
+import parsers, database as db
+from deep_research import launch_screening_job, poll_until_done
+import ice_critic
+
+load_dotenv()               # loads OPENAI_API_KEY if present
+MCP_URL = os.getenv("MCP_URL", "http://localhost:8000")  # FastAPI must run
+
+st.set_page_config(page_title="Neurosurgery SR Screener", layout="wide")
+st.title("📑 Systematic‑Review Abstract Screener")
+
+# 1. Upload file
+upload = st.file_uploader("Upload PubMed XML, RIS, or CSV", type=["xml","ris","csv"])
+if upload:
+    st.session_state["upload_name"] = upload.name
+
+if upload and st.button("Parse & Load"):
+    # Parse
+    try:
+        if upload.name.endswith(".xml"):
+            df = parsers.parse_pubmed_xml(upload)
+        elif upload.name.endswith(".ris"):
+            df = parsers.parse_ris(upload)
+        else:
+            df = parsers.parse_csv(upload)
+    except Exception as e:
+        st.error(f"Parsing failed: {e}")
+        st.stop()
+
+    db.init_db()
+    db.bulk_insert(df)
+    st.success(f"Loaded {len(df):,} citations into local corpus.")
+
+    # Keep df in session
+    st.session_state["df"] = df
+
+# 2. Enter PICO
+if "df" in st.session_state:
+    st.header("Define PICO")
+    with st.form("pico_form"):
+        population  = st.text_input("Population",  placeholder="Adults with cervical SCI")
+        intervention = st.text_input("Intervention", placeholder="Early decompressive surgery")
+        comparator   = st.text_input("Comparator",   placeholder="Conservative management")
+        outcome      = st.text_input("Outcome",      placeholder="Functional recovery (AIS)")
+        submitted    = st.form_submit_button("Run screening")
+
+    if submitted:
+        pico = dict(population=population, intervention=intervention,
+                    comparator=comparator, outcome=outcome)
+        job_id = launch_screening_job(pico, len(st.session_state["df"]), MCP_URL)
+        st.info(f"Screening launched (job id: {job_id}). Polling…")
+        placeholder = st.empty()
+
+        # background polling in a thread to keep UI responsive
+        def wait_and_render():
+            result_text = poll_until_done(job_id)
+            placeholder.success("Screening complete ✅")
+            studies = json.loads(result_text)
+            included_df = pd.DataFrame([s for s in studies if s["include"]])
+            excluded_df = pd.DataFrame([s for s in studies if not s["include"]])
+
+            st.subheader("Included studies")
+            st.dataframe(included_df, use_container_width=True)
+            st.download_button("⬇️ JSON", json.dumps(studies, indent=2),
+                               "screened_studies.json", "application/json")
+
+            # ICE critique
+            flags = ice_critic.critique(result_text)
+            if flags:
+                st.subheader("ICE Critique Flags 🧐")
+                st.write(pd.DataFrame(flags))
+
+        threading.Thread(target=wait_and_render, daemon=True).start()
+
+Run with:
+
+streamlit run app.py
+
+(Keep uvicorn mcp_server:app --port 8000 running in another terminal, or use Docker below.)
+
+⸻
+
+8 docker-compose.yml  (optional)
+
+version: "3.9"
+services:
+  mcp:
+    build: .
+    command: uvicorn mcp_server:app --host 0.0.0.0 --port 8000
+    volumes: [".:/code"]
+    environment:
+      - PYTHONUNBUFFERED=1
+  ui:
+    build: .
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes: [".:/code"]
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MCP_URL=http://mcp:8000
+    depends_on: [mcp]
+
+Add a minimal Dockerfile:
+
+FROM python:3.11-slim
+WORKDIR /code
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+
+Then:
+
+cp .env.example .env        # add your OPENAI_API_KEY
+docker-compose up --build
+# UI at http://localhost:8501
+
+
+⸻
+
+9 .env.example
+
+# copy to .env and fill
+OPENAI_API_KEY=sk-................................
+# only needed if you docker‑compose
+MCP_URL=http://mcp:8000
+
+
+⸻
+
+Final notes & next steps
+	•	FTS quality – SQLite FTS5 is fine for ≤ 50 k abstracts. For larger sets, switch to Elasticsearch or Qdrant.
+	•	ICE expansion – Replace the stub with your ICE “recipes” once you settle on critique rules.
+	•	Error handling – Wrap Deep‑Research errors (quota, timeouts) with user‑friendly messages.
+	•	Caching – If you re‑screen same corpus with different PICO, consider memoising /search results.
+
+Copy the files, pip install -r requirements.txt, run the two processes (or docker-compose up), upload your citation export, type the PICO, and watch the included list pop out in a few minutes. Happy systematic‑reviewing!
