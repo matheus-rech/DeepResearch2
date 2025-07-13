@@ -17,6 +17,7 @@ import ice_critic
 from data_validator import CitationValidator
 from pubmed_export import export_citations
 from multi_agent_research import run_multi_agent_screening
+from sqlalchemy import func
 
 # Load environment variables
 load_dotenv()
@@ -491,7 +492,7 @@ def show_criteria_step():
         citations_with_abstract = database.query(db.Citation).filter(
             db.Citation.abstract.isnot(None),
             db.Citation.abstract != '',
-            db.func.length(db.Citation.abstract) > 50
+            func.length(db.Citation.abstract) > 50
         ).count()
         
         abstract_coverage = (citations_with_abstract / stats["total_citations"] * 100) if stats["total_citations"] > 0 else 0
