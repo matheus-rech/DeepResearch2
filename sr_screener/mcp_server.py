@@ -210,6 +210,7 @@ def main(port=8000):
     # Log server info
     logger.info(f"Starting Systematic Review MCP server on 0.0.0.0:{port}")
     logger.info("Server will be accessible via SSE transport")
+    logger.info(f"External URL: https://{os.getenv('REPL_SLUG', 'unknown')}-{port}.{os.getenv('REPL_OWNER', 'unknown')}.repl.co/sse/")
     
     # Start server with SSE transport
     server.run(transport="sse", host="0.0.0.0", port=port)

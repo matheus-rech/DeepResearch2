@@ -30,14 +30,14 @@ def launch_screening_job(
 ) -> str:
     """
     Launch a deep research screening job for systematic review.
-    
+
     Args:
         pico_criteria: PICO criteria dict with keys: population, intervention, comparator, outcome
         inclusion_criteria: List of inclusion criteria
         exclusion_criteria: List of exclusion criteria  
         corpus_size: Total number of citations in corpus
         mcp_url: URL of the MCP server
-        
+
     Returns:
         Job ID for polling
     """
@@ -99,6 +99,17 @@ Your screening decisions should be based solely on the information available in 
 Be consistent in applying the screening criteria across all citations.
 Document your reasoning clearly for transparency and potential appeals."""
 
+    # Configure MCP server URL - needs to be accessible from OpenAI's servers
+    # In production, this should be your deployed server URL
+    if os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
+        # Running on Replit - use the public URL without port (Replit handles port forwarding)
+        repl_slug = os.getenv("REPL_SLUG")
+        repl_owner = os.getenv("REPL_OWNER")
+        mcp_url = f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"
+    else:
+        # Local development fallback
+        mcp_url = "http://localhost:8001/sse/"
+
     try:
         # Launch the deep research job with proper configuration per docs
         response = client.responses.create(
@@ -117,10 +128,10 @@ Document your reasoning clearly for transparency and potential appeals."""
             ],
             # Note: background mode not supported with MCP tools
         )
-        
+
         logger.info(f"Launched screening job: {response.id}")
         return response
-        
+
     except Exception as e:
         logger.error(f"Failed to launch screening job: {e}")
         raise
@@ -129,11 +140,11 @@ Document your reasoning clearly for transparency and potential appeals."""
 def poll_job_status(response: Any, sleep_interval: int = 5) -> Dict[str, Any]:
     """
     Extract results from a deep research response (no polling needed without background mode).
-    
+
     Args:
         response: The response object from create call
         sleep_interval: Not used (kept for compatibility)
-        
+
     Returns:
         Final response with results
     """
@@ -173,7 +184,7 @@ def poll_job_status(response: Any, sleep_interval: int = 5) -> Dict[str, Any]:
                     "reasoning": getattr(response, "reasoning", {})
                 }
             raise ValueError("Response has no content")
-            
+
     except Exception as e:
         logger.error(f"Error extracting results: {e}")
         raise
@@ -182,10 +193,10 @@ def poll_job_status(response: Any, sleep_interval: int = 5) -> Dict[str, Any]:
 def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
     """
     Parse the JSON screening results from deep research.
-    
+
     Args:
         results_json: JSON string with screening results
-        
+
     Returns:
         List of parsed screening decisions with PICOTT elements
     """
@@ -194,13 +205,13 @@ def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
         # Deep research might include explanation text around the JSON
         import re
         json_match = re.search(r'\[\s*\{.*\}\s*\]', results_json, re.DOTALL)
-        
+
         if json_match:
             results = json.loads(json_match.group())
         else:
             # Try parsing the whole content
             results = json.loads(results_json)
-            
+
         # Validate and normalize results
         normalized_results = []
         for result in results:
@@ -231,9 +242,9 @@ def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
                     "exclusionCriteria": [],
                     "decision": "Include" if result.get("include", False) else "Exclude"
                 })
-            
+
         return normalized_results
-        
+
     except Exception as e:
         logger.error(f"Failed to parse screening results: {e}")
         # Return empty results rather than failing completely
@@ -252,7 +263,7 @@ def run_systematic_screening(
 ) -> Dict[str, Any]:
     """
     Run a complete systematic review screening process.
-    
+
     Args:
         pico_criteria: PICO criteria
         inclusion_criteria: Inclusion criteria list
@@ -261,14 +272,14 @@ def run_systematic_screening(
         mcp_url: MCP server URL
         callback: Optional callback function for progress updates
         use_multi_agent: Whether to use multi-agent architecture
-        
+
     Returns:
         Dictionary with screening results and statistics
     """
     # Use multi-agent mode if requested
     if use_multi_agent:
         from multi_agent_research import run_multi_agent_screening
-        
+
         # Run sync function directly
         result = run_multi_agent_screening(
             pico_criteria,
@@ -292,29 +303,29 @@ def run_systematic_screening(
             mcp_url,
             search_mode
         )
-        
+
         # Extract results
         if callback:
             callback(f"Processing screening results...")
         results_data = poll_job_status(response)
-        
+
         # Parse results
         if callback:
             callback("Parsing screening results...")
         results = parse_screening_results(results_data["content"])
-        
+
         # Calculate statistics
         total_screened = len(results)
         included = [r for r in results if r["include"]]
         excluded = [r for r in results if not r["include"]]
-        
+
         # Confidence breakdown
         confidence_counts = {
             "high": len([r for r in results if r["confidence"] == "high"]),
             "medium": len([r for r in results if r["confidence"] == "medium"]),
             "low": len([r for r in results if r["confidence"] == "low"])
         }
-        
+
         return {
             "job_id": response.id,
             "results": results,
@@ -329,7 +340,7 @@ def run_systematic_screening(
             "excluded_citations": excluded,
             "reasoning": results_data.get("reasoning", {})
         }
-        
+
     except Exception as e:
         logger.error(f"Screening failed: {e}")
         raise
