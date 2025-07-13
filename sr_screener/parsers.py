@@ -12,6 +12,7 @@ import json
 from dateutil import parser as date_parser
 from bs4 import BeautifulSoup
 import logging
+import requests
 
 # Optional imports for academic paper readers
 try:
@@ -499,3 +500,79 @@ def parse_pubmed_search(search_query: str, max_results: int = 10) -> pd.DataFram
     except Exception as e:
         logger.error(f"Error fetching from PubMed: {e}")
         raise
+
+
+def fetch_crossref_abstract(doi: str) -> Optional[str]:
+    """
+    Fetch abstract from CrossRef API using DOI.
+    
+    Args:
+        doi: DOI identifier (e.g., "10.1234/example")
+        
+    Returns:
+        Abstract text if found, None otherwise
+    """
+    if not doi or pd.isna(doi) or doi == '':
+        return None
+    
+    # Clean DOI - remove any URL prefix
+    if 'doi.org/' in doi:
+        doi = doi.split('doi.org/')[-1]
+    
+    try:
+        # CrossRef API endpoint
+        url = f"https://api.crossref.org/works/{doi}"
+        headers = {
+            'User-Agent': 'SystematicReviewScreener/1.0 (mailto:support@example.com)'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            work = data.get('message', {})
+            
+            # Try to get abstract
+            abstract = work.get('abstract')
+            if abstract:
+                # Clean HTML tags if present
+                soup = BeautifulSoup(abstract, 'html.parser')
+                return soup.get_text().strip()
+        
+        return None
+        
+    except Exception as e:
+        logger.debug(f"Could not fetch abstract from CrossRef for DOI {doi}: {e}")
+        return None
+
+
+def enrich_citations_with_crossref(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Enrich citations with missing abstracts from CrossRef.
+    
+    Args:
+        df: DataFrame with citation data
+        
+    Returns:
+        DataFrame with enriched abstracts
+    """
+    enriched_count = 0
+    
+    for idx, row in df.iterrows():
+        # Only fetch if abstract is missing or too short
+        current_abstract = row.get('abstract', '')
+        if pd.isna(current_abstract) or len(str(current_abstract).strip()) < 50:
+            doi = row.get('doi')
+            if doi and not pd.isna(doi):
+                logger.info(f"Fetching abstract from CrossRef for DOI: {doi}")
+                abstract = fetch_crossref_abstract(doi)
+                
+                if abstract and len(abstract) >= 50:
+                    df.at[idx, 'abstract'] = abstract
+                    enriched_count += 1
+                    logger.info(f"Successfully enriched abstract for {doi}")
+    
+    if enriched_count > 0:
+        logger.info(f"Enriched {enriched_count} citations with abstracts from CrossRef")
+    
+    return df

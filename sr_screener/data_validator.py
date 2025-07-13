@@ -6,6 +6,7 @@ import pandas as pd
 import logging
 from typing import Dict, List, Tuple, Optional
 import re
+from parsers import enrich_citations_with_crossref
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,23 @@ class CitationValidator:
         
         # Create validated DataFrame
         validated_df = pd.DataFrame(validated_rows)
+        
+        # Enrich with CrossRef if abstracts are missing
+        initial_missing = self.stats["missing_abstract"]
+        if initial_missing > 0:
+            logger.info(f"Attempting to enrich {initial_missing} citations with missing abstracts using CrossRef...")
+            validated_df = enrich_citations_with_crossref(validated_df)
+            
+            # Re-count missing abstracts after enrichment
+            self.stats["missing_abstract"] = 0
+            for idx, row in validated_df.iterrows():
+                abstract = row.get('abstract', '')
+                if pd.isna(abstract) or len(str(abstract).strip()) < 50:
+                    self.stats["missing_abstract"] += 1
+            
+            self.stats["enhanced"] = initial_missing - self.stats["missing_abstract"]
+            if self.stats["enhanced"] > 0:
+                logger.info(f"Successfully enriched {self.stats['enhanced']} abstracts from CrossRef")
         
         # Generate summary report
         report = self.generate_validation_report()
@@ -141,7 +159,7 @@ class CitationValidator:
         
         if self.stats["enhanced"] > 0:
             report["recommendations"].append(
-                f"Enhanced {self.stats['enhanced']} citations by using keywords as minimal abstracts."
+                f"✅ Successfully enriched {self.stats['enhanced']} citations with abstracts from CrossRef API."
             )
         
         # Add detailed issues for problematic citations

@@ -254,6 +254,20 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Fixed NaN JSON Errors and Integrated CrossRef API for Abstract Enrichment
+  - **Bug Fixed**: Resolved JSON parsing errors caused by NaN values in citation data
+  - **Root Cause**: Python's NaN values are not valid JSON and were causing database insertion failures
+  - **Solution**: Added deep recursive NaN cleaning function that converts all NaN/Infinity values to None
+  - **CrossRef Integration**: 
+    - Automatically fetches missing abstracts from CrossRef API using DOIs
+    - Runs during validation phase when abstracts are missing or too short (<50 chars)
+    - Shows enrichment status in UI with count of successfully enriched citations
+  - **Benefits**:
+    - Citations with NaN values now import successfully
+    - Abstracts are automatically retrieved for citations that have DOIs but missing abstracts
+    - Improved data quality for AI screening without manual intervention
+  - **Clean Integration**: Both fixes work seamlessly with existing functionality
+
 - **July 13, 2025**: Added Direct Academic Database Search Integration (ArXiv & PubMed)
   - **New Feature**: Integrated LlamaIndex readers for direct academic paper search
   - **Search Sources**:

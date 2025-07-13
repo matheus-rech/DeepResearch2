@@ -1,0 +1,15 @@
+DETAIL:  Token "NaN" is invalid.
+CONTEXT:  JSON data, line 1: ...itle": "Annals of Internal Medicine", "ISBN": NaN...
+
+[SQL: INSERT INTO citations (id, title, abstract, year, authors, journal, doi, mesh_terms, keywords, raw_data, created_at, search_vector, embedding) VALUES (%(id)s, %(title)s, %(abstract)s, %(year)s, %(authors)s, %(journal)s, %(doi)s, %(mesh_terms)s, %(keywords)s, %(raw_data)s::JSON, %(created_at)s, %(search_vector)s, %(embedding)s::FLOAT[])]
+[parameters: {'id': '10.7326/M16-0161', 'title': 'Recommendations for the Conduct and Reporting of Modeling and Simulation Studies in Health Technology Assessment', 'abstract': '', 'year': 2016, 'authors': '[]', 'journal': '', 'doi': '10.7326/M16-0161', 'mesh_terms': '[]', 'keywords': '[]', 'raw_data': '{"source": "csv", "row": {"Key": "H3ENUMGZ", "Item Type": "journalArticle", "year": 2016.0, "Author": "Dahabreh, Issa J.; Trikalinos, Thomas A.; Balk ... (1967 characters truncated) ... Session": NaN, "Committee": NaN, "History": NaN, "Legislative Body": NaN, "id": "10.7326/M16-0161", "authors": [], "mesh_terms": [], "keywords": []}}', 'created_at': datetime.datetime(2025, 7, 13, 18, 4, 22, 420821), 'search_vector': None, 'embedding': None}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Error processing citation hash_e56aa9013fae: (psycopg2.errors.InvalidTextRepresentation) invalid input syntax for type json
+LINE 1: ...mplications', '', NULL, '[]', '', '', '[]', '[]', '{"source"...
+                                                             ^
+DETAIL:  Token "NaN" is invalid.
+CONTEXT:  JSON data, line 1: ...D9EE", "Item Type": "journalArticle", "year": NaN...
+
+[SQL: INSERT INTO citations (id, title, abstract, year, authors, journal, doi, mesh_terms, keywords, raw_data, created_at, search_vector, embedding) VALUES (%(id)s, %(title)s, %(abstract)s, %(year)s, %(authors)s, %(journal)s, %(doi)s, %(mesh_terms)s, %(keywords)s, %(raw_data)s::JSON, %(created_at)s, %(search_vector)s, %(embedding)s::FLOAT[])]
+[parameters: {'id': 'hash_e56aa9013fae', 'title': 'Outcome Measures Framework: Literature Review Findings and Implications', 'abstract': '', 'year': None, 'authors': '[]', 'journal': '', 'doi': '', 'mesh_terms': '[]', 'keywords': '[]', 'raw_data': '{"source": "csv", "row": {"Key": "XKA5D9EE", "Item Type": "journalArticle", "year": NaN, "Author": NaN, "title": "Outcome Measures Framework: Literat ... (3524 characters truncated) ... ection": NaN, "Session": NaN, "Committee": NaN, "History": NaN, "Legislative Body": NaN, "id": NaN, "authors": [], "mesh_terms": [], "keywords": []}}', 'created_at': datetime.datetime(2025, 7, 13, 18, 4, 22, 779823), 'search_vector': None, 'embedding': None}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)

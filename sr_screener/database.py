@@ -29,6 +29,28 @@ openai_client = None
 if os.environ.get("OPENAI_API_KEY"):
     openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
+
+def clean_nan_values(obj):
+    """
+    Recursively clean NaN values from nested dictionaries and lists.
+    Converts NaN to None for proper JSON serialization.
+    """
+    import math
+    
+    if isinstance(obj, dict):
+        return {k: clean_nan_values(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nan_values(item) for item in obj]
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    elif pd.isna(obj):
+        return None
+    elif isinstance(obj, str) and obj.lower() == 'nan':
+        return None
+    else:
+        return obj
+
+
 class Citation(Base):
     __tablename__ = 'citations'
     
@@ -146,8 +168,8 @@ def bulk_insert_citations(df: pd.DataFrame):
                 # Clean NaN values from raw_data
                 raw_data = row.get('raw_data', {})
                 if isinstance(raw_data, dict):
-                    # Convert NaN to None recursively
-                    raw_data = json.loads(json.dumps(raw_data, default=lambda x: None if pd.isna(x) else x))
+                    # Deep clean NaN values recursively
+                    raw_data = clean_nan_values(raw_data)
                 else:
                     raw_data = {}
                 

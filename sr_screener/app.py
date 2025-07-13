@@ -189,6 +189,10 @@ def show_upload_step():
                             else:
                                 st.info(f"📊 Data Quality Score: {quality_score:.1f}% - Good quality for screening")
                             
+                            # Show CrossRef enrichment status
+                            if validation_report["summary"].get("enhanced", 0) > 0:
+                                st.success(f"🔍 CrossRef Enrichment: Added abstracts to {validation_report['summary']['enhanced']} citations")
+                            
                             # Show recommendations
                             if validation_report.get("recommendations"):
                                 with st.expander("📋 Data Quality Recommendations"):
