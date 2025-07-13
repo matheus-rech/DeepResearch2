@@ -250,6 +250,25 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Enhanced Deep Research Integration Following OpenAI Documentation
+  - **MCP Server Compliance**: Updated to match exact Deep Research specification
+    - Search tool now returns only: id, title, text, url (removed extra fields)
+    - Fetch tool returns "text" field instead of "abstract" for full content
+    - Added proper URL generation for citations (PubMed, DOI, or internal)
+  - **Deep Research API Updates**:
+    - Switched to Responses API with background mode (as strongly recommended)
+    - Proper tool configuration: `{"type": "mcp", "server": {"url": mcp_url}}`
+    - Added max_tool_calls parameter (200) for cost control
+    - Implemented proper polling mechanism for background jobs
+  - **Multi-Agent Optimization**:
+    - Uses gpt-4.1 for triage/clarification/instruction building (faster, cheaper)
+    - Only uses o3-deep-research for actual screening (expensive operations)
+    - All agents now use appropriate models per documentation best practices
+  - **Methodological Improvements**:
+    - Background mode prevents timeouts for long screening tasks
+    - Proper error handling for API failures
+    - Follows OpenAI's 3-step pattern: Clarification → Prompt enrichment → Deep research
+
 - **July 13, 2025**: Implemented Multi-Agent Architecture for Systematic Review
   - Added multi-agent pipeline inspired by OpenAI cookbook with specialized agents:
     - **Triage Agent**: Evaluates criteria completeness and routes requests

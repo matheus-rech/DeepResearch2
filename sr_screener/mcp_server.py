@@ -58,24 +58,30 @@ def create_server():
             # Get search results
             results = db.search_citations(query, limit)
             
-            # Format results for MCP
+            # Format results for MCP - must comply with Deep Research spec
             formatted_results = []
             for citation in results:
+                # Build URL based on citation ID
+                url = None
+                if citation["id"].startswith("PMID:"):
+                    pmid = citation["id"].replace("PMID:", "")
+                    url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                elif citation.get("doi"):
+                    url = f"https://doi.org/{citation['doi']}"
+                else:
+                    # Fallback URL for internal references
+                    url = f"mcp://citation/{citation['id']}"
+                
+                # Format exactly as required by Deep Research spec
                 formatted_results.append({
                     "id": citation["id"],
                     "title": citation["title"],
-                    "snippet": citation["abstract_snippet"] or citation.get("abstract", "")[:200] + "...",
-                    "year": citation.get("year"),
-                    "journal": citation.get("journal", ""),
-                    "relevance": citation.get("relevance", 1.0),
-                    "type": "citation"
+                    "text": citation["abstract_snippet"] or citation.get("abstract", "")[:200] + "...",
+                    "url": url
                 })
             
-            return {
-                "results": formatted_results,
-                "query": query,
-                "total": len(formatted_results)
-            }
+            # Return only the results array as specified
+            return {"results": formatted_results}
             
         except Exception as e:
             logger.error(f"Search error: {e}")
@@ -128,20 +134,19 @@ def create_server():
             elif citation.get("doi"):
                 url = f"https://doi.org/{citation['doi']}"
             
-            # Format response
+            # Format response according to Deep Research spec
             return {
                 "id": citation["id"],
                 "title": citation["title"],
-                "abstract": citation["abstract"],
-                "authors": citation.get("authors", []),
-                "year": citation.get("year"),
-                "journal": citation.get("journal", ""),
-                "doi": citation.get("doi", ""),
-                "mesh_terms": citation.get("mesh_terms", []),
-                "keywords": citation.get("keywords", []),
+                "text": citation["abstract"],  # Required field name per spec
                 "url": url,
-                "type": "citation",
                 "metadata": {
+                    "authors": citation.get("authors", []),
+                    "year": citation.get("year"),
+                    "journal": citation.get("journal", ""),
+                    "doi": citation.get("doi", ""),
+                    "mesh_terms": citation.get("mesh_terms", []),
+                    "keywords": citation.get("keywords", []),
                     "created_at": citation.get("created_at"),
                     "source": citation.get("raw_data", {}).get("source", "unknown")
                 }

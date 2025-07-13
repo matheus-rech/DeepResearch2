@@ -13,7 +13,11 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Initialize async client
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=600.0)
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=3600.0)  # 1 hour timeout as per docs
+
+# Model selection per Deep Research best practices
+FAST_MODEL = "gpt-4.1"  # For clarification and triage steps
+DEEP_RESEARCH_MODEL = "o3-deep-research-2025-06-26"  # For actual screening
 
 # Agent prompts for systematic review screening
 TRIAGE_AGENT_PROMPT = """
@@ -128,7 +132,7 @@ class MultiAgentScreener:
         """
         
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model=FAST_MODEL,  # Use fast model for triage per docs
             messages=[
                 {"role": "system", "content": TRIAGE_AGENT_PROMPT},
                 {"role": "user", "content": prompt}
@@ -150,7 +154,7 @@ class MultiAgentScreener:
         """
         
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model=FAST_MODEL,  # Use fast model for clarification per docs
             messages=[
                 {"role": "system", "content": CLARIFIER_AGENT_PROMPT},
                 {"role": "user", "content": prompt}
@@ -182,7 +186,7 @@ class MultiAgentScreener:
             prompt += f"\n\nClarifications provided:\n{json.dumps(clarifications, indent=2)}"
         
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model=FAST_MODEL,  # Use fast model for instruction building per docs
             messages=[
                 {"role": "system", "content": INSTRUCTION_BUILDER_PROMPT},
                 {"role": "user", "content": prompt}
@@ -194,6 +198,8 @@ class MultiAgentScreener:
     async def screen_citations(self, instructions: str, batch_size: int = 20) -> List[Dict[str, Any]]:
         """Screening agent performs the actual citation screening"""
         screening_prompt = f"""
+        {SCREENING_AGENT_PROMPT}
+        
         {instructions}
         
         You have access to an MCP server with search and fetch tools to access the citation corpus.
@@ -206,76 +212,60 @@ class MultiAgentScreener:
         4. Document your decisions with exact quotes
         
         IMPORTANT: For each citation, you MUST extract exact quotes for PICOTT elements.
+        Return results as a JSON array with the structure shown in the prompt.
         """
         
-        # Use Deep Research model with MCP tools
-        response = await client.chat.completions.create(
-            model="o3-deep-research-2025-06-26",
-            messages=[
-                {"role": "system", "content": SCREENING_AGENT_PROMPT},
-                {"role": "user", "content": screening_prompt}
-            ],
+        # Use Deep Research model with Responses API per documentation
+        response = await client.responses.create(
+            model=DEEP_RESEARCH_MODEL,
+            input=screening_prompt,
             tools=[
                 {
-                    "type": "function",
-                    "function": {
-                        "name": "search",
-                        "description": "Search for citations in the corpus",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "query": {"type": "string"},
-                                "limit": {"type": "integer", "default": 100}
-                            },
-                            "required": ["query"]
-                        }
-                    }
-                },
-                {
-                    "type": "function", 
-                    "function": {
-                        "name": "fetch",
-                        "description": "Fetch complete citation details by ID",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"}
-                            },
-                            "required": ["id"]
-                        }
-                    }
-                },
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "corpus_info",
-                        "description": "Get information about the citation corpus",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {}
-                        }
+                    "type": "mcp",
+                    "server": {
+                        "url": self.mcp_url
                     }
                 }
             ],
-            max_tokens=100000,
-            temperature=0.1
+            max_tool_calls=200,  # Limit tool calls for cost control
+            mode="background"  # Use background mode as recommended
         )
         
-        # Parse the screening results
-        try:
-            content = response.choices[0].message.content
-            # Extract JSON array from the response
-            import re
-            json_match = re.search(r'\[[\s\S]*\]', content)
-            if json_match:
-                results = json.loads(json_match.group())
-                return results
-            else:
-                logger.error("No JSON array found in response")
+        # Poll for results since we're using background mode
+        job_id = response.id
+        logger.info(f"Launched background screening job: {job_id}")
+        
+        # Poll until completion
+        while True:
+            status_response = await client.responses.retrieve(job_id)
+            
+            if status_response.status == "completed":
+                # Extract content from response
+                if status_response.output_text:
+                    content = status_response.output_text
+                    # Parse JSON results
+                    try:
+                        import re
+                        json_match = re.search(r'\[[\s\S]*\]', content)
+                        if json_match:
+                            results = json.loads(json_match.group())
+                            return results
+                        else:
+                            logger.error("No JSON array found in response")
+                            return []
+                    except Exception as e:
+                        logger.error(f"Error parsing screening results: {e}")
+                        return []
+                else:
+                    logger.error("No content in completed response")
+                    return []
+                    
+            elif status_response.status == "failed":
+                logger.error(f"Screening job failed: {getattr(status_response, 'error', 'Unknown error')}")
                 return []
-        except Exception as e:
-            logger.error(f"Error parsing screening results: {e}")
-            return []
+            
+            # Still processing
+            await asyncio.sleep(5)
     
     async def run_screening_pipeline(
         self,

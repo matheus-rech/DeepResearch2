@@ -97,40 +97,20 @@ Be consistent in applying the screening criteria across all citations.
 Document your reasoning clearly for transparency and potential appeals."""
 
     try:
-        # Launch the deep research job
+        # Launch the deep research job with proper configuration per docs
         response = client.responses.create(
             model=MODEL,
-            input=[
-                {
-                    "role": "developer",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": system_message
-                        }
-                    ]
-                },
-                {
-                    "role": "user", 
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": task
-                        }
-                    ]
-                }
-            ],
-            reasoning={
-                "summary": "auto"  # Auto-generate reasoning summary
-            },
+            input=task,  # Deep Research expects a simple string input
             tools=[
                 {
                     "type": "mcp",
-                    "server_label": "internal_file_lookup",
-                    "server_url": mcp_url,
-                    "require_approval": "never"
+                    "server": {
+                        "url": mcp_url
+                    }
                 }
-            ]
+            ],
+            max_tool_calls=200,  # Control costs by limiting tool calls
+            mode="background"  # Use background mode as recommended
         )
         
         logger.info(f"Launched screening job: {response.id}")
