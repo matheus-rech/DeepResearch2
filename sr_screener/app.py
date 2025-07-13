@@ -14,6 +14,7 @@ import parsers
 import database as db
 from deep_research import run_systematic_screening
 import ice_critic
+from data_validator import CitationValidator
 
 # Load environment variables
 load_dotenv()
@@ -162,15 +163,53 @@ def show_upload_step():
                         # Show preview
                         st.success(f"Successfully parsed {len(df)} citations!")
 
+                        # Validate citations
+                        validator = CitationValidator()
+                        validated_df, validation_report = validator.validate_citations(df)
+                        
+                        # Show validation warnings
+                        if validation_report["critical_issues"]["missing_abstracts"] > 0:
+                            st.warning(f"""
+                            ⚠️ **Abstract Coverage Warning**
+                            - {validation_report['critical_issues']['missing_abstracts']} citations ({validation_report['critical_issues']['missing_abstracts_pct']:.1f}%) are missing abstracts
+                            - Abstracts are critical for accurate AI screening
+                            
+                            **Recommendation**: Consider using a different export format that includes full abstracts
+                            """)
+                        
+                        # Show data quality score
+                        quality_score = validation_report["quality_score"]
+                        if quality_score < 80:
+                            st.error(f"📊 Data Quality Score: {quality_score:.1f}% - Below recommended threshold")
+                        else:
+                            st.info(f"📊 Data Quality Score: {quality_score:.1f}% - Good quality for screening")
+                        
+                        # Show recommendations
+                        if validation_report.get("recommendations"):
+                            with st.expander("📋 Data Quality Recommendations"):
+                                for rec in validation_report["recommendations"]:
+                                    st.write(f"• {rec}")
+                        
+                        # Show problematic citations
+                        if validation_report.get("problematic_citations"):
+                            with st.expander("⚠️ Citations with Issues"):
+                                for issue in validation_report["problematic_citations"][:5]:
+                                    if isinstance(issue, dict) and "citation_id" in issue:
+                                        st.write(f"**{issue['citation_id']}**: {issue.get('title', 'Unknown')}")
+                                        for prob in issue.get('issues', []):
+                                            st.write(f"  - {prob}")
+                                    elif "note" in issue:
+                                        st.write(issue["note"])
+
                         # Display sample
                         st.subheader("Preview (first 5 citations)")
-                        preview_df = df[['id', 'title', 'year', 'journal']].head()
+                        preview_df = validated_df[['id', 'title', 'year', 'journal']].head()
                         st.dataframe(preview_df, use_container_width=True)
 
                         # Save to database
-                        with st.spinner("Loading into database..."):
+                        with st.spinner("Loading validated citations into database..."):
                             db.init_db()
-                            stats = db.bulk_insert_citations(df)
+                            stats = db.bulk_insert_citations(validated_df)
 
                         # Show detailed results
                         if stats['inserted'] > 0:
@@ -325,6 +364,29 @@ def show_criteria_step():
     """Show the screening criteria configuration interface."""
     st.header("Step 2: Define Screening Criteria")
     st.markdown("Configure your systematic review screening criteria below.")
+    
+    # Check abstract coverage before proceeding
+    stats = db.get_corpus_stats()
+    with db.get_db() as database:
+        # Count citations with abstracts
+        citations_with_abstract = database.query(db.Citation).filter(
+            db.Citation.abstract.isnot(None),
+            db.Citation.abstract != '',
+            db.func.length(db.Citation.abstract) > 50
+        ).count()
+        
+        abstract_coverage = (citations_with_abstract / stats["total_citations"] * 100) if stats["total_citations"] > 0 else 0
+        
+        # Show warning if abstract coverage is low
+        if abstract_coverage < 80:
+            st.warning(f"""
+            ⚠️ **Low Abstract Coverage**: Only {citations_with_abstract}/{stats["total_citations"]} citations ({abstract_coverage:.1f}%) have sufficient abstracts.
+            
+            **Impact**: AI screening accuracy will be significantly reduced for citations without abstracts.
+            Consider uploading a more complete dataset for better results.
+            """)
+        else:
+            st.success(f"✅ Good abstract coverage: {abstract_coverage:.1f}% of citations have abstracts")
 
     # PICOTT Criteria
     st.subheader("PICOTT Criteria")

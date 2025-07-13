@@ -254,6 +254,24 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Added Citation Data Validation System for Abstract Quality Assurance
+  - **New Component**: Created `data_validator.py` module with `CitationValidator` class
+  - **Validation Features**:
+    - Checks for missing or insufficient abstracts (minimum 50 characters)
+    - Validates citation IDs and generates fallback IDs when needed
+    - Checks title quality (minimum 10 characters)
+    - Validates year ranges (1900-2100)
+    - Provides data quality score (percentage of valid citations)
+  - **UI Integration**:
+    - Shows abstract coverage warnings during upload
+    - Displays data quality score and recommendations
+    - Lists problematic citations with specific issues
+    - Added abstract coverage check in criteria step
+  - **Smart Enhancements**:
+    - Automatically uses keywords as minimal abstracts when main abstract is missing
+    - Generates IDs from DOI or title hash for citations with invalid IDs
+  - **Impact**: Ensures high-quality data for AI screening, especially focusing on abstract availability
+
 - **July 13, 2025**: Fixed PostgreSQL Transaction Error and JSON NaN Parsing in Citation Import
   - **Issue Fixed**: Two critical bugs in citation import:
     1. PostgreSQL transaction failing with "current transaction is aborted" error
