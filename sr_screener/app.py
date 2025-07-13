@@ -71,10 +71,9 @@ def main():
         # Step indicators
         steps = {
             "upload": "1. Upload Citations",
-            "visualize": "2. Visualize Data",
-            "criteria": "3. Define Criteria", 
-            "screen": "4. Run Screening",
-            "results": "5. Review Results"
+            "criteria": "2. Define Criteria", 
+            "screen": "3. Run Screening",
+            "results": "4. Review Results"
         }
         
         for step_key, step_name in steps.items():
@@ -104,8 +103,7 @@ def main():
         show_screening_step()
     elif st.session_state.current_step == "results":
         show_results_step()
-    elif st.session_state.current_step == "visualize":
-        show_visualization_step()
+    
 
 
 def show_upload_step():
@@ -157,7 +155,6 @@ def show_upload_step():
                         if stats['skipped'] > 0:
                             st.warning(f"⚠️ Skipped {stats['skipped']} citations due to errors")
                         st.session_state.citations_loaded = True
-                        st.session_state.current_step = "visualize"
                         st.rerun()
                         
                     except Exception as e:
@@ -174,7 +171,7 @@ def show_upload_step():
         with col1:
             if st.button("Continue with existing corpus →", use_container_width=True):
                 st.session_state.citations_loaded = True
-                st.session_state.current_step = "visualize"
+                st.session_state.current_step = "criteria"
                 st.rerun()
         
         with col2:
@@ -191,6 +188,104 @@ def show_upload_step():
                 else:
                     st.session_state.confirm_clear = True
                     st.warning("Click again to confirm clearing all citations")
+    
+    # Citation Browser (if citations exist)
+    if st.session_state.citations_loaded or corpus_stats["total_citations"] > 0:
+        st.divider()
+        st.subheader("📄 Browse Your Citations")
+        
+        # Get citations from database
+        with db.get_db() as database:
+            citations_query = database.query(db.Citation).limit(100).all()  # Limit for performance
+            
+            if citations_query:
+                # Convert to DataFrame for easier handling
+                citations_data = []
+                for citation in citations_query:
+                    citations_data.append({
+                        'id': citation.id,
+                        'title': citation.title,
+                        'abstract': citation.abstract[:200] + "..." if citation.abstract and len(citation.abstract) > 200 else citation.abstract,
+                        'year': citation.year,
+                        'journal': citation.journal,
+                        'authors': citation.authors,
+                        'doi': citation.doi
+                    })
+                
+                df = pd.DataFrame(citations_data)
+                
+                # Search and filter options
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    search_query = st.text_input("🔍 Search titles/abstracts", placeholder="Enter keywords...")
+                
+                with col2:
+                    if df['year'].notna().any():
+                        min_year = int(df['year'].min())
+                        max_year = int(df['year'].max())
+                        year_range = st.slider("Publication Year Range", min_year, max_year, (min_year, max_year))
+                    else:
+                        year_range = None
+                
+                # Apply filters
+                filtered_df = df.copy()
+                
+                if search_query:
+                    mask = (
+                        filtered_df['title'].str.contains(search_query, case=False, na=False) |
+                        filtered_df['abstract'].str.contains(search_query, case=False, na=False)
+                    )
+                    filtered_df = filtered_df[mask]
+                
+                if year_range and df['year'].notna().any():
+                    filtered_df = filtered_df[
+                        (filtered_df['year'] >= year_range[0]) & 
+                        (filtered_df['year'] <= year_range[1])
+                    ]
+                
+                st.write(f"Showing {len(filtered_df)} of {len(df)} citations")
+                
+                # Display citations (show first 10)
+                display_count = min(10, len(filtered_df))
+                for idx, citation in filtered_df.head(display_count).iterrows():
+                    with st.expander(f"📄 {citation['title'][:80]}... ({citation['year'] if pd.notna(citation['year']) else 'No year'})"):
+                        col1, col2 = st.columns([3, 1])
+                        
+                        with col1:
+                            st.markdown(f"**Title:** {citation['title']}")
+                            if citation['abstract']:
+                                st.markdown(f"**Abstract:** {citation['abstract']}")
+                            st.markdown(f"**Journal:** {citation['journal'] if citation['journal'] else 'Not specified'}")
+                            if citation['doi']:
+                                st.markdown(f"**DOI:** {citation['doi']}")
+                        
+                        with col2:
+                            st.markdown(f"**Year:** {int(citation['year']) if pd.notna(citation['year']) else 'N/A'}")
+                            st.markdown(f"**ID:** {citation['id']}")
+                            
+                            # Authors info
+                            if citation['authors']:
+                                try:
+                                    authors = json.loads(citation['authors'])
+                                    if isinstance(authors, list) and len(authors) > 0:
+                                        st.markdown(f"**Authors:** {len(authors)} authors")
+                                        with st.expander("View authors"):
+                                            for author in authors[:5]:  # Show first 5 authors
+                                                st.write(f"• {author}")
+                                            if len(authors) > 5:
+                                                st.write(f"... and {len(authors) - 5} more")
+                                except (json.JSONDecodeError, TypeError):
+                                    st.markdown(f"**Authors:** {citation['authors'][:50]}...")
+                
+                if len(filtered_df) > display_count:
+                    st.info(f"Showing first {display_count} citations. Use search to narrow results.")
+                
+                # Continue button
+                st.divider()
+                if st.button("Continue to Define Criteria →", type="primary", use_container_width=True):
+                    st.session_state.current_step = "criteria"
+                    st.rerun()
 
 
 def show_criteria_step():
@@ -309,7 +404,7 @@ def show_criteria_step():
     
     with col5:
         if st.button("← Back", use_container_width=True):
-            st.session_state.current_step = "visualize"
+            st.session_state.current_step = "upload"
             st.rerun()
     
     with col6:
@@ -690,338 +785,7 @@ def show_results_step():
             st.rerun()
 
 
-def show_visualization_step():
-    """Show comprehensive visualization of the citation corpus."""
-    st.header("Step 2: Visualize Your Citation Corpus")
-    st.markdown("Explore and analyze your uploaded citations with interactive visualizations.")
-    
-    # Get all citations from database
-    with db.get_db() as database:
-        citations_query = database.query(db.Citation).all()
-        
-        if not citations_query:
-            st.warning("No citations found in database. Please upload citations first.")
-            if st.button("← Back to Upload"):
-                st.session_state.current_step = "upload"
-                st.rerun()
-            return
-        
-        # Convert to DataFrame for analysis
-        citations_data = []
-        for citation in citations_query:
-            citations_data.append({
-                'id': citation.id,
-                'title': citation.title,
-                'abstract': citation.abstract[:200] + "..." if citation.abstract and len(citation.abstract) > 200 else citation.abstract,
-                'year': citation.year,
-                'journal': citation.journal,
-                'authors': citation.authors,
-                'doi': citation.doi,
-                'created_at': citation.created_at
-            })
-        
-        df = pd.DataFrame(citations_data)
-    
-    # Summary statistics
-    st.subheader("📊 Corpus Overview")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Citations", len(df))
-    with col2:
-        valid_years = df[df['year'].notna()]['year']
-        if len(valid_years) > 0:
-            st.metric("Year Range", f"{int(valid_years.min())}-{int(valid_years.max())}")
-        else:
-            st.metric("Year Range", "N/A")
-    with col3:
-        unique_journals = df['journal'].nunique()
-        st.metric("Unique Journals", unique_journals)
-    with col4:
-        with_abstracts = df['abstract'].notna().sum()
-        st.metric("With Abstracts", f"{with_abstracts}/{len(df)}")
-    
-    # Tabs for different visualizations
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📅 Publication Timeline", 
-        "📚 Journal Distribution", 
-        "🔍 Citation Browser",
-        "📝 Text Analysis",
-        "📊 Data Quality"
-    ])
-    
-    with tab1:
-        st.subheader("Publication Timeline")
-        
-        # Year distribution
-        if df['year'].notna().any():
-            year_counts = df['year'].value_counts().sort_index()
-            
-            # Line chart
-            st.markdown("**Publications by Year**")
-            st.line_chart(year_counts)
-            
-            # Bar chart with better formatting
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.bar_chart(year_counts)
-            
-            with col2:
-                st.markdown("**Top Years:**")
-                top_years = year_counts.head(5)
-                for year, count in top_years.items():
-                    st.write(f"{int(year)}: {count} papers")
-        else:
-            st.info("No year information available in the citations.")
-    
-    with tab2:
-        st.subheader("Journal Distribution")
-        
-        if df['journal'].notna().any():
-            journal_counts = df['journal'].value_counts().head(20)
-            
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown("**Top 20 Journals**")
-                st.bar_chart(journal_counts)
-            
-            with col2:
-                st.markdown("**Journal Statistics:**")
-                st.write(f"Unique journals: {df['journal'].nunique()}")
-                st.write(f"Most cited journal: {journal_counts.index[0] if len(journal_counts) > 0 else 'N/A'}")
-                st.write(f"Papers in top journal: {journal_counts.iloc[0] if len(journal_counts) > 0 else 0}")
-                
-                # Show top journals as table
-                st.markdown("**Top Journals:**")
-                top_journals_df = pd.DataFrame({
-                    'Journal': journal_counts.head(10).index,
-                    'Count': journal_counts.head(10).values
-                })
-                st.dataframe(top_journals_df, use_container_width=True)
-        else:
-            st.info("No journal information available in the citations.")
-    
-    with tab3:
-        st.subheader("Citation Browser")
-        
-        # Search and filter options
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            search_query = st.text_input("🔍 Search titles/abstracts", placeholder="Enter keywords...")
-        
-        with col2:
-            if df['year'].notna().any():
-                min_year = int(df['year'].min())
-                max_year = int(df['year'].max())
-                year_range = st.slider("Publication Year Range", min_year, max_year, (min_year, max_year))
-            else:
-                year_range = None
-        
-        with col3:
-            if df['journal'].notna().any():
-                journals = ['All'] + sorted(df['journal'].dropna().unique().tolist())
-                selected_journal = st.selectbox("Journal Filter", journals)
-            else:
-                selected_journal = 'All'
-        
-        # Apply filters
-        filtered_df = df.copy()
-        
-        if search_query:
-            mask = (
-                filtered_df['title'].str.contains(search_query, case=False, na=False) |
-                filtered_df['abstract'].str.contains(search_query, case=False, na=False)
-            )
-            filtered_df = filtered_df[mask]
-        
-        if year_range and df['year'].notna().any():
-            filtered_df = filtered_df[
-                (filtered_df['year'] >= year_range[0]) & 
-                (filtered_df['year'] <= year_range[1])
-            ]
-        
-        if selected_journal != 'All':
-            filtered_df = filtered_df[filtered_df['journal'] == selected_journal]
-        
-        st.write(f"Showing {len(filtered_df)} of {len(df)} citations")
-        
-        # Pagination
-        citations_per_page = 10
-        total_pages = (len(filtered_df) + citations_per_page - 1) // citations_per_page
-        
-        if total_pages > 0:
-            page = st.selectbox("Page", range(1, total_pages + 1))
-            start_idx = (page - 1) * citations_per_page
-            end_idx = start_idx + citations_per_page
-            page_df = filtered_df.iloc[start_idx:end_idx]
-            
-            # Display citations
-            for idx, citation in page_df.iterrows():
-                with st.expander(f"📄 {citation['title'][:80]}... ({citation['year'] if pd.notna(citation['year']) else 'No year'})"):
-                    col1, col2 = st.columns([3, 1])
-                    
-                    with col1:
-                        st.markdown(f"**Title:** {citation['title']}")
-                        if citation['abstract']:
-                            st.markdown(f"**Abstract:** {citation['abstract']}")
-                        st.markdown(f"**Journal:** {citation['journal'] if citation['journal'] else 'Not specified'}")
-                        if citation['doi']:
-                            st.markdown(f"**DOI:** {citation['doi']}")
-                    
-                    with col2:
-                        st.markdown(f"**Year:** {int(citation['year']) if pd.notna(citation['year']) else 'N/A'}")
-                        st.markdown(f"**ID:** {citation['id']}")
-                        
-                        # Authors info
-                        if citation['authors']:
-                            try:
-                                authors = json.loads(citation['authors'])
-                                if isinstance(authors, list) and len(authors) > 0:
-                                    st.markdown(f"**Authors:** {len(authors)} authors")
-                                    with st.expander("View authors"):
-                                        for author in authors[:10]:  # Show first 10 authors
-                                            st.write(f"• {author}")
-                                        if len(authors) > 10:
-                                            st.write(f"... and {len(authors) - 10} more")
-                            except (json.JSONDecodeError, TypeError):
-                                st.markdown(f"**Authors:** {citation['authors'][:50]}...")
-        else:
-            st.info("No citations match the current filters.")
-    
-    with tab4:
-        st.subheader("Text Analysis")
-        
-        # Word cloud of titles
-        if len(df) > 0:
-            all_titles = ' '.join(df['title'].dropna().astype(str))
-            
-            # Simple word frequency analysis
-            import re
-            words = re.findall(r'\b[a-zA-Z]{3,}\b', all_titles.lower())
-            
-            # Filter out common words
-            stop_words = {'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 
-                         'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 
-                         'how', 'its', 'may', 'new', 'now', 'old', 'see', 'two', 'who', 'boy', 
-                         'did', 'she', 'use', 'way', 'who', 'oil', 'sit', 'set', 'own', 'under'}
-            
-            filtered_words = [word for word in words if word not in stop_words and len(word) > 3]
-            word_freq = pd.Series(filtered_words).value_counts().head(30)
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**Most Common Words in Titles**")
-                st.bar_chart(word_freq)
-            
-            with col2:
-                st.markdown("**Word Frequency Table**")
-                word_df = pd.DataFrame({
-                    'Word': word_freq.index,
-                    'Frequency': word_freq.values
-                })
-                st.dataframe(word_df, use_container_width=True)
-            
-            # Abstract length analysis
-            if df['abstract'].notna().any():
-                abstract_lengths = df['abstract'].dropna().str.len()
-                
-                st.markdown("**Abstract Length Distribution**")
-                st.histogram_chart(abstract_lengths, bins=30)
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Avg Abstract Length", f"{int(abstract_lengths.mean())} chars")
-                with col2:
-                    st.metric("Shortest Abstract", f"{abstract_lengths.min()} chars")
-                with col3:
-                    st.metric("Longest Abstract", f"{abstract_lengths.max()} chars")
-    
-    with tab5:
-        st.subheader("Data Quality Assessment")
-        
-        # Missing data analysis
-        st.markdown("**Data Completeness**")
-        
-        completeness_data = {
-            'Field': ['Title', 'Abstract', 'Year', 'Journal', 'Authors', 'DOI'],
-            'Complete': [
-                df['title'].notna().sum(),
-                df['abstract'].notna().sum(),
-                df['year'].notna().sum(),
-                df['journal'].notna().sum(),
-                df['authors'].notna().sum(),
-                df['doi'].notna().sum()
-            ],
-            'Missing': [
-                df['title'].isna().sum(),
-                df['abstract'].isna().sum(),
-                df['year'].isna().sum(),
-                df['journal'].isna().sum(),
-                df['authors'].isna().sum(),
-                df['doi'].isna().sum()
-            ]
-        }
-        
-        completeness_df = pd.DataFrame(completeness_data)
-        completeness_df['Percentage'] = (completeness_df['Complete'] / len(df) * 100).round(1)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.dataframe(completeness_df, use_container_width=True)
-        
-        with col2:
-            # Visualization of completeness
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.barh(completeness_df['Field'], completeness_df['Percentage'])
-            ax.set_xlabel('Completeness (%)')
-            ax.set_title('Data Completeness by Field')
-            st.pyplot(fig)
-        
-        # Duplicate detection
-        st.markdown("**Duplicate Detection**")
-        
-        # Check for potential duplicates by title similarity
-        title_duplicates = df['title'].duplicated().sum()
-        doi_duplicates = df['doi'].duplicated().sum() if df['doi'].notna().any() else 0
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Exact Title Duplicates", title_duplicates)
-        with col2:
-            st.metric("DOI Duplicates", doi_duplicates)
-        with col3:
-            quality_score = (completeness_df['Percentage'].mean() - title_duplicates * 2).round(1)
-            st.metric("Quality Score", f"{max(0, quality_score)}%")
-        
-        if title_duplicates > 0:
-            st.warning(f"Found {title_duplicates} potential duplicate titles. Review before screening.")
-            
-            # Show duplicates
-            duplicate_titles = df[df['title'].duplicated(keep=False)]['title'].unique()
-            with st.expander("View Duplicate Titles"):
-                for title in duplicate_titles[:10]:
-                    st.write(f"• {title}")
-                if len(duplicate_titles) > 10:
-                    st.write(f"... and {len(duplicate_titles) - 10} more")
-    
-    # Navigation
-    st.divider()
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("← Back to Upload", use_container_width=True):
-            st.session_state.current_step = "upload"
-            st.rerun()
-    
-    with col2:
-        if st.button("Continue to Criteria →", type="primary", use_container_width=True):
-            st.session_state.current_step = "criteria"
-            st.rerun()
+
 
 
 if __name__ == "__main__":
