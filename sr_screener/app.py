@@ -495,23 +495,68 @@ def show_screening_step():
 
     # Advanced options
     with st.expander("Advanced Options"):
-        use_multi_agent = st.checkbox(
-            "Use Multi-Agent Architecture",
-            value=st.session_state.get('use_multi_agent', False),
-            key='use_multi_agent',
-            help="Enable multi-agent pipeline with specialized agents for triage, clarification, instruction building, and screening. This can improve quality but takes longer."
-        )
+        col_adv1, col_adv2 = st.columns(2)
+        
+        with col_adv1:
+            use_multi_agent = st.checkbox(
+                "Use Multi-Agent Architecture",
+                value=st.session_state.get('use_multi_agent', False),
+                key='use_multi_agent',
+                help="Enable multi-agent pipeline with specialized agents for triage, clarification, instruction building, and screening. This can improve quality but takes longer."
+            )
 
-        if use_multi_agent:
-            st.info("""
-            **Multi-Agent Pipeline:**
-            1. **Triage Agent**: Evaluates criteria completeness
-            2. **Clarifier Agent**: Generates clarification questions (if needed)
-            3. **Instruction Builder**: Creates detailed screening protocol
-            4. **Screening Agent**: Performs systematic screening
+            if use_multi_agent:
+                st.info("""
+                **Multi-Agent Pipeline:**
+                1. **Triage Agent**: Evaluates criteria completeness
+                2. **Clarifier Agent**: Generates clarification questions (if needed)
+                3. **Instruction Builder**: Creates detailed screening protocol
+                4. **Screening Agent**: Performs systematic screening
 
-            This approach maximizes context window usage and optimizes each step.
-            """)
+                This approach maximizes context window usage and optimizes each step.
+                """)
+        
+        with col_adv2:
+            search_mode = st.selectbox(
+                "Search Mode",
+                options=["fulltext", "semantic"],
+                index=0,
+                key='search_mode',
+                help="Choose between keyword-based full-text search or AI-powered semantic search"
+            )
+            
+            if search_mode == "semantic":
+                st.info("""
+                **Semantic Search Mode:**
+                - Uses OpenAI embeddings to find conceptually similar citations
+                - Finds related papers even with different terminology
+                - Better for broad concept exploration
+                """)
+                
+                # Check if embeddings are available
+                stats = db.get_corpus_stats()
+                if stats['total_citations'] > 0:
+                    with db.get_db() as database:
+                        embedded_count = database.query(db.Citation).filter(
+                            db.Citation.embedding != None
+                        ).count()
+                    
+                    if embedded_count == 0:
+                        st.warning("⚠️ No embeddings generated yet. Semantic search will fall back to full-text search.")
+                        if st.button("Generate Embeddings"):
+                            with st.spinner("Generating embeddings... This may take a few minutes."):
+                                embedding_stats = db.generate_citation_embeddings()
+                                st.success(f"Generated {embedding_stats['generated']} embeddings!")
+                                st.rerun()
+                    else:
+                        st.success(f"✓ {embedded_count}/{stats['total_citations']} citations have embeddings")
+            else:
+                st.info("""
+                **Full-text Search Mode:**
+                - Traditional keyword-based search
+                - Fast and precise for specific terms
+                - Best for targeted searches
+                """)
 
     # Run screening button
     st.divider()
@@ -529,6 +574,7 @@ def show_screening_step():
             inclusion_criteria = st.session_state.get('inclusion_criteria', [])
             exclusion_criteria = st.session_state.get('exclusion_criteria', [])
             use_multi_agent = st.session_state.get('use_multi_agent', False)
+            search_mode = st.session_state.get('search_mode', 'fulltext')
             
             # Validate criteria exist
             if not pico_criteria:
@@ -570,7 +616,8 @@ def show_screening_step():
                         stats['total_citations'],
                         MCP_URL,
                         callback=update_progress,
-                        use_multi_agent=use_multi_agent
+                        use_multi_agent=use_multi_agent,
+                        search_mode=search_mode
                     )
                 
                 # Validate results

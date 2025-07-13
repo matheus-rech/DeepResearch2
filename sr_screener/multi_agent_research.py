@@ -180,6 +180,8 @@ class MultiAgentScreener:
         {json.dumps(criteria.get('exclusion_criteria', []), indent=2)}
         
         Corpus Size: {criteria.get('corpus_size', 0)} citations
+        
+        Search Mode: {criteria.get('search_mode', 'fulltext')}
         """
         
         if clarifications:
@@ -325,7 +327,8 @@ async def run_multi_agent_screening(
     exclusion_criteria: List[str],
     corpus_size: int,
     mcp_url: str = "http://localhost:8001/sse/",
-    callback=None
+    callback=None,
+    search_mode: str = "fulltext"
 ) -> Dict[str, Any]:
     """Run multi-agent screening with the provided criteria"""
     
@@ -335,7 +338,8 @@ async def run_multi_agent_screening(
         "pico_criteria": pico_criteria,
         "inclusion_criteria": inclusion_criteria,
         "exclusion_criteria": exclusion_criteria,
-        "corpus_size": corpus_size
+        "corpus_size": corpus_size,
+        "search_mode": search_mode
     }
     
     return await screener.run_screening_pipeline(

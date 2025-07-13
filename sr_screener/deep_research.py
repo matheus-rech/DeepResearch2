@@ -25,7 +25,8 @@ def launch_screening_job(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/"
+    mcp_url: str = "http://localhost:8001/sse/",
+    search_mode: str = "fulltext"
 ) -> str:
     """
     Launch a deep research screening job for systematic review.
@@ -43,6 +44,8 @@ def launch_screening_job(
     # Build the screening task prompt
     task = f"""You are conducting a systematic review screening of {corpus_size} research citations.
 The citations are available through the MCP internal_file_lookup tool.
+
+IMPORTANT: Use search mode="{search_mode}" for all search operations.
 
 Your task is to screen each citation based on the following criteria:
 
@@ -230,7 +233,8 @@ def run_systematic_screening(
     corpus_size: int,
     mcp_url: str = "http://localhost:8001/sse/",
     callback=None,
-    use_multi_agent: bool = False
+    use_multi_agent: bool = False,
+    search_mode: str = "fulltext"
 ) -> Dict[str, Any]:
     """
     Run a complete systematic review screening process.
@@ -278,7 +282,8 @@ def run_systematic_screening(
             inclusion_criteria,
             exclusion_criteria,
             corpus_size,
-            mcp_url
+            mcp_url,
+            search_mode
         )
         
         # Poll for results

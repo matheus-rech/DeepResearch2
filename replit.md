@@ -254,6 +254,27 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Added Vector Embeddings for Semantic Search
+  - **Database Enhancement**: Integrated PostgreSQL pgvector extension for semantic search
+    - Added embedding column to citations table for storing OpenAI embeddings
+    - Automatic migration adds column to existing databases
+    - Uses text-embedding-3-small model for efficient embedding generation
+  - **Dual Search Modes**: Users can now choose between:
+    - **Full-text Search**: Traditional keyword-based PostgreSQL search (default)
+    - **Semantic Search**: AI-powered conceptual similarity using vector embeddings
+  - **UI Integration**: 
+    - Added search mode selector in Advanced Options during screening
+    - Shows embedding generation progress and status
+    - One-click embedding generation for existing citations
+  - **Clean Integration**: 
+    - Preserves all existing functionality - full-text search remains default
+    - Embeddings generated automatically on citation upload (if API key present)
+    - Graceful fallback to full-text search if embeddings unavailable
+  - **MCP Server Updates**:
+    - Search tool now accepts `mode` parameter ("fulltext" or "semantic")
+    - Deep Research prompts updated to specify search mode
+    - Multi-agent pipeline passes search mode through all agents
+
 - **July 13, 2025**: Enhanced Deep Research Integration Following OpenAI Documentation
   - **MCP Server Compliance**: Updated to match exact Deep Research specification
     - Search tool now returns only: id, title, text, url (removed extra fields)
