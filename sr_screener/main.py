@@ -35,14 +35,14 @@ def run_both():
     import threading
     import time
     
-    # Start MCP server in a thread (on port 8001)
+    # Start MCP server in a thread (on port 8001 - internal access)
     mcp_thread = threading.Thread(target=run_mcp_server, daemon=True)
     mcp_thread.start()
     
     # Give MCP server time to start
     time.sleep(2)
     
-    # Run Streamlit in main thread (on port 8000)
+    # Run Streamlit in main thread (on port 8000 - main web port)
     run_streamlit_app()
 
 

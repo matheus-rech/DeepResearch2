@@ -23,7 +23,10 @@ from sqlalchemy import func
 load_dotenv()
 
 # Configuration
-MCP_URL = os.getenv("MCP_URL", "https://8001-{}.replit.app/sse/".format(os.getenv("REPL_ID", "localhost")))
+# For Deep Research API (external access) - must use /sse/ endpoint
+EXTERNAL_MCP_URL = os.getenv("EXTERNAL_MCP_URL", "https://{}.replit.app/sse/".format(os.getenv("REPL_ID", "localhost")))
+# For internal use (localhost)
+MCP_URL = os.getenv("MCP_URL", "http://localhost:8001/sse/")
 
 # Page configuration
 st.set_page_config(

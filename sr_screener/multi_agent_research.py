@@ -123,12 +123,14 @@ class MultiAgentScreener:
     def triage_request(self, criteria: Dict[str, Any]) -> Dict[str, Any]:
         """Triage agent evaluates if criteria need clarification"""
         prompt = f"""
-        Evaluate these systematic review screening criteria:
+        Evaluate these systematic review screening criteria and respond with valid JSON:
         
         PICOTT: {json.dumps(criteria.get('pico_criteria', {}), indent=2)}
         Inclusion: {criteria.get('inclusion_criteria', [])}
         Exclusion: {criteria.get('exclusion_criteria', [])}
         Corpus size: {criteria.get('corpus_size', 0)}
+        
+        Please respond with JSON format containing your evaluation.
         """
         
         response = client.chat.completions.create(

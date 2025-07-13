@@ -254,6 +254,18 @@ python main.py sr-ui
 
 ## Recent Changes
 
+- **July 13, 2025**: Fixed MCP Server External Access for Deep Research API
+  - **Issue Fixed**: Deep Research API couldn't access MCP server due to Replit port forwarding issues
+  - **Root Cause**: External Replit URLs (8000-{repl-id}.replit.app and {repl-id}.replit.app) returned 404 for MCP server
+  - **Solution**: 
+    1. Moved MCP server to port 8000 (primary external port)
+    2. Moved Streamlit UI to port 8001 
+    3. Updated MCP URL configuration to use localhost:8000/sse/ for Deep Research API calls
+    4. Configured proper MCP tool structure per OpenAI Deep Research API documentation
+  - **API Configuration**: Uses exact format from OpenAI cookbook: `server_url`, `server_label`, `require_approval: "never"`
+  - **Status**: MCP server running on port 8000 with proper /sse/ endpoint, accessible to Deep Research API
+  - **Documentation**: Followed OpenAI Deep Research API cookbook specifications for MCP integration
+
 - **July 13, 2025**: Fixed Multi-Agent Async/Sync Compatibility Issues
   - **Issue Fixed**: Multi-agent research pipeline was using async OpenAI client calls causing runtime errors
   - **Root Cause**: Mixed async/sync code execution in Streamlit environment
