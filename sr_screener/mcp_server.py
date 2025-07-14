@@ -34,7 +34,7 @@ def create_server():
     db.init_db()
     
     # Create FastMCP server
-    mcp = FastMCP("Systematic Review MCP Server", instructions=server_instructions)
+    mcp = FastMCP("Systematic_Review_MCP_Server", instructions=server_instructions)
     
     @mcp.tool()
     async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, Any]:
@@ -178,7 +178,7 @@ def create_server():
         """
         return {
             "status": "healthy",
-            "server": "Systematic Review MCP Server",
+            "server": "Systematic_Review_MCP_Server",
             "timestamp": str(time.time())
         }
     

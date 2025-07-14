@@ -216,7 +216,7 @@ def run_vector_store_mode():
 
 def run_systematic_review_mode():
     """Run the MCP server in systematic review mode."""
-    logger.info("Starting Systematic Review MCP Server")
+    logger.info("Starting Systematic_Review_MCP_Server")
     sys.path.insert(0, 'sr_screener')
     
     try:
