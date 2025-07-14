@@ -15,7 +15,6 @@ from sqlalchemy import create_engine, text, Column, String, Text, Integer, DateT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.dialects.postgresql import ARRAY
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -70,7 +69,7 @@ class Citation(Base):
     search_vector = Column(Text)  # Will store tsvector
     
     # Vector embedding for semantic search
-    embedding = Column(ARRAY(Float))  # Store OpenAI embeddings
+    embedding = Column(Text)  # Store OpenAI embeddings as JSON text for cross-database compatibility
 
 
 # Create engine and session
@@ -123,22 +122,43 @@ def init_db():
                 logger.info("Added embedding column to citations table")
             except Exception as e:
                 logger.info(f"Embedding column might already exist: {e}")
-            
-            # Create indexes
-            conn.execute(text("""
-                -- Create GIN index for full-text search
-                CREATE INDEX IF NOT EXISTS idx_citations_search 
-                ON citations USING gin(to_tsvector('english', 
-                    coalesce(title, '') || ' ' || 
-                    coalesce(abstract, '') || ' ' || 
-                    coalesce(authors, '') || ' ' ||
-                    coalesce(keywords, '')
-                ));
+    else:
+        # Check if embedding column exists for SQLite
+        with engine.connect() as conn:
+            try:
+                # Check if column exists by querying table info
+                result = conn.execute(text("PRAGMA table_info(citations)"))
+                columns = [row[1] for row in result]
                 
-                -- Create index for vector similarity search (if embeddings exist)
-                -- This will be created after embeddings are generated
-            """))
-            conn.commit()
+                if 'embedding' not in columns:
+                    conn.execute(text("""
+                        ALTER TABLE citations 
+                        ADD COLUMN embedding TEXT
+                    """))
+                    conn.commit()
+                    logger.info("Added embedding column (TEXT) to citations table for SQLite")
+                else:
+                    logger.info("Embedding column already exists in SQLite table")
+            except Exception as e:
+                logger.info(f"Error checking/adding embedding column: {e}")
+            
+        # Create indexes for PostgreSQL only
+        if 'postgresql' in str(engine.url):
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    -- Create GIN index for full-text search
+                    CREATE INDEX IF NOT EXISTS idx_citations_search 
+                    ON citations USING gin(to_tsvector('english', 
+                        coalesce(title, '') || ' ' || 
+                        coalesce(abstract, '') || ' ' || 
+                        coalesce(authors, '') || ' ' ||
+                        coalesce(keywords, '')
+                    ));
+                    
+                    -- Create index for vector similarity search (if embeddings exist)
+                    -- This will be created after embeddings are generated
+                """))
+                conn.commit()
 
 
 def bulk_insert_citations(df: pd.DataFrame):
@@ -183,7 +203,7 @@ def bulk_insert_citations(df: pd.DataFrame):
                 citation_data = {
                     'title': str(row.get('title', '')),
                     'abstract': str(row.get('abstract', '')),
-                    'year': int(row.get('year')) if pd.notna(row.get('year')) else None,
+                    'year': int(float(str(row.get('year')))) if pd.notna(row.get('year')) and str(row.get('year')).replace('.','').replace('-','').isdigit() else None,
                     'authors': json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
                     'journal': str(row.get('journal', '')),
                     'doi': str(row.get('doi', '') if pd.notna(row.get('doi', '')) else ''),
@@ -217,7 +237,10 @@ def bulk_insert_citations(df: pd.DataFrame):
             logger.info("Generating embeddings for new citations...")
             embedding_stats = generate_citation_embeddings()
             logger.info(f"Embedding results: {embedding_stats}")
-            stats['embeddings'] = embedding_stats
+            if isinstance(embedding_stats, dict):
+                stats.update(embedding_stats)
+            else:
+                stats['embeddings'] = embedding_stats
         except Exception as e:
             logger.warning(f"Could not generate embeddings: {e}")
     
@@ -423,7 +446,7 @@ def generate_citation_embeddings():
                 embedding = generate_embedding(text)
                 
                 if embedding:
-                    citation.embedding = embedding
+                    citation.embedding = json.dumps(embedding)
                     stats["generated"] += 1
                 else:
                     stats["skipped"] += 1
@@ -434,17 +457,18 @@ def generate_citation_embeddings():
         
         db.commit()
         
-        # Create vector index if we have embeddings
+        # Create text index for embedding column (works for all databases)
         if stats["generated"] > 0:
             try:
-                db.execute(text("""
-                    CREATE INDEX IF NOT EXISTS idx_citations_embedding 
-                    ON citations USING ivfflat (embedding vector_cosine_ops)
-                    WITH (lists = 100);
-                """))
-                db.commit()
+                with engine.connect() as conn:
+                    conn.execute(text("""
+                        CREATE INDEX IF NOT EXISTS idx_citations_embedding_text 
+                        ON citations (embedding);
+                    """))
+                    conn.commit()
+                    logger.info("Created embedding text index")
             except Exception as e:
-                logger.warning(f"Could not create vector index: {e}")
+                logger.warning(f"Could not create embedding index: {e}")
     
     return stats
 
@@ -471,24 +495,35 @@ def semantic_search_citations(query: str, limit: Optional[int] = None) -> List[D
         return search_citations(query, limit)
     
     with get_db() as db:
-        # Convert embedding to PostgreSQL array format
-        embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
-        
-        # Semantic similarity search using cosine distance
         limit_clause = f"LIMIT {limit}" if limit is not None else ""
         results = db.execute(text(f"""
-            SELECT 
-                id, title, abstract, year, journal, doi, authors, mesh_terms, keywords,
-                1 - (embedding <=> :query_embedding::vector) as similarity
+            SELECT id, title, abstract, year, journal, doi, authors, mesh_terms, keywords, embedding
             FROM citations
             WHERE embedding IS NOT NULL
-            ORDER BY embedding <=> :query_embedding::vector
             {limit_clause}
-        """), {"query_embedding": embedding_str})
+        """))
         
-        citations = []
+        citations_with_similarity = []
         for row in results:
-            # Create snippet from abstract
+            try:
+                stored_embedding = json.loads(row.embedding)
+                # Compute cosine similarity
+                dot_product = sum(a * b for a, b in zip(query_embedding, stored_embedding))
+                norm_a = sum(a * a for a in query_embedding) ** 0.5
+                norm_b = sum(b * b for b in stored_embedding) ** 0.5
+                similarity = dot_product / (norm_a * norm_b) if norm_a * norm_b > 0 else 0
+                
+                citations_with_similarity.append((row, similarity))
+            except (json.JSONDecodeError, TypeError, ZeroDivisionError):
+                continue
+        
+        citations_with_similarity.sort(key=lambda x: x[1], reverse=True)
+        if limit:
+            citations_with_similarity = citations_with_similarity[:limit]
+        
+        # Process results
+        citations = []
+        for row, similarity in citations_with_similarity:
             abstract = row.abstract or ""
             snippet = abstract[:200] + "..." if len(abstract) > 200 else abstract
             
@@ -503,7 +538,7 @@ def semantic_search_citations(query: str, limit: Optional[int] = None) -> List[D
                 "authors": json.loads(row.authors) if row.authors else [],
                 "mesh_terms": json.loads(row.mesh_terms) if row.mesh_terms else [],
                 "keywords": json.loads(row.keywords) if row.keywords else [],
-                "relevance": row.similarity
+                "relevance": similarity
             })
         
         return citations
