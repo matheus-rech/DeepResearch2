@@ -2,6 +2,8 @@
 
 This is a sample Model Context Protocol (MCP) server designed to work with ChatGPT's Deep Research feature. It provides semantic search through OpenAI's Vector Store API and document retrieval capabilities, demonstrating how to build custom MCP servers that can extend ChatGPT with company-specific knowledge and tools.
 
+> **Note**: This repository has been verified for development workflow compatibility.
+
 ## Features
 
 - **Search Tool**: Semantic search using OpenAI Vector Store API
