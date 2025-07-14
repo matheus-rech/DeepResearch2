@@ -201,12 +201,12 @@ def run_vector_store_mode():
     server = create_server()
 
     # Configure and start the server
-    logger.info("Starting MCP server on 0.0.0.0:8000")
+    logger.info("Starting MCP server on 0.0.0.0:8001")
     logger.info("Server will be accessible via SSE transport")
 
     try:
         # Use FastMCP's built-in run method with SSE transport
-        server.run(transport="sse", host="0.0.0.0", port=8000)
+        server.run(transport="sse", host="0.0.0.0", port=8001)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:

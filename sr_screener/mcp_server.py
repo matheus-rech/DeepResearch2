@@ -37,7 +37,7 @@ def create_server():
     mcp = FastMCP("Systematic Review MCP Server", instructions=server_instructions)
     
     @mcp.tool()
-    async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, List[Dict[str, Any]]]:
+    async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, Any]:
         """
         Search for citations in the systematic review corpus.
         
@@ -98,7 +98,6 @@ def create_server():
             logger.error(f"Search error: {e}")
             return {
                 "results": [],
-                "query": query,
                 "error": str(e)
             }
     
@@ -218,7 +217,7 @@ def create_server():
     return mcp
 
 
-def main(port=8000):
+def main(port=8001):
     """Main function to start the MCP server."""
     server = create_server()
     
