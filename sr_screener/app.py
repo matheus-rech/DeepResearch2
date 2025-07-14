@@ -444,7 +444,7 @@ def show_upload_step():
                     display_count = len(filtered_df)
 
                 # Display citations
-                for idx, citation in filtered_df.head(display_count).iterrows():
+                for idx, citation in filtered_df.head(int(display_count)).iterrows():
                     with st.expander(f"📄 {citation['title'][:80]}... ({citation['year'] if pd.notna(citation['year']) else 'No year'})"):
                         col1, col2 = st.columns([3, 1])
 
