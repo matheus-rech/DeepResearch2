@@ -121,7 +121,7 @@ Document your reasoning clearly for transparency and potential appeals."""
                 },
                 {
                     "type": "mcp",
-                    "server_label": "Systematic Review MCP Server",
+                    "server_label": "Systematic_Review_MCP_Server",
                     "server_url": mcp_url,
                     "require_approval": "never"
                 }
