@@ -224,7 +224,22 @@ def main(port=8001):
     # Log server info
     logger.info(f"Starting Systematic Review MCP server on 0.0.0.0:{port}")
     logger.info("Server will be accessible via SSE transport")
-    logger.info(f"External URL: https://{os.getenv('REPL_SLUG', 'unknown')}-{port}.{os.getenv('REPL_OWNER', 'unknown')}.repl.co/sse/")
+    
+    external_host = os.getenv('EXTERNAL_HOST', 'localhost')
+    external_port = os.getenv('EXTERNAL_PORT', str(port))
+    
+    if external_host == 'localhost':
+        logger.warning("Using localhost URL - this will not be accessible to OpenAI Deep Research API")
+        logger.warning("Set EXTERNAL_HOST environment variable to public hostname for production")
+    
+    external_url = f"https://{external_host}:{external_port}/sse/" if external_host != 'localhost' else f"http://localhost:{port}/sse/"
+    logger.info(f"External URL for Deep Research API: {external_url}")
+    
+    repl_slug = os.getenv('REPL_SLUG')
+    repl_owner = os.getenv('REPL_OWNER')
+    if repl_slug and repl_owner:
+        repl_url = f"https://{repl_slug}-{port}.{repl_owner}.repl.co/sse/"
+        logger.info(f"Replit URL (if applicable): {repl_url}")
     
     # Start server with SSE transport
     server.run(transport="sse", host="0.0.0.0", port=port)
