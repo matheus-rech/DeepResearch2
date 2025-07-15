@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, ai-artifact, develop ]
+    branches: [ main, ai-artifact, develop, unified-main ]
   pull_request:
-    branches: [ main, ai-artifact ]
+    branches: [ main, ai-artifact, unified-main ]
 
 jobs:
   test:
@@ -56,7 +56,7 @@ jobs:
   docker:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ai-artifact')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ai-artifact' || github.ref == 'refs/heads/unified-main')
     
     steps:
     - uses: actions/checkout@v4
@@ -73,7 +73,24 @@ jobs:
         docker run -d --name test-container -p 8000:8000 -p 8001:8001 \
           -e OPENAI_API_KEY=test_key \
           deepresearch2:latest
-        sleep 30
+        
+        # Wait for container to be ready using our health check
+        timeout=60
+        start_time=$(date +%s)
+        while ! docker exec test-container curl -f http://localhost:8001/health >/dev/null 2>&1; do
+          current_time=$(date +%s)
+          if [ $((current_time - start_time)) -gt $timeout ]; then
+            echo "Container failed to become ready within $timeout seconds"
+            docker logs test-container
+            docker stop test-container
+            docker rm test-container
+            exit 1
+          fi
+          echo "Waiting for container to be ready..."
+          sleep 5
+        done
+        
+        echo "Container is ready!"
         docker logs test-container
         docker stop test-container
         docker rm test-container
@@ -81,7 +98,7 @@ jobs:
   deploy:
     needs: [test, docker]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/unified-main')
     
     steps:
     - uses: actions/checkout@v4
