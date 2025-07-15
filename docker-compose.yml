@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  deepresearch2:
+    build: .
+    ports:
+      - "8000:8000"  # Streamlit UI
+      - "8001:8001"  # MCP Server
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY_2=${OPENAI_API_KEY_2:-}
+      - VECTOR_STORE_ID=${VECTOR_STORE_ID:-}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///citations.db}
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8001
+      - STREAMLIT_HOST=0.0.0.0
+      - STREAMLIT_PORT=8000
+      - EXTERNAL_HOST=${EXTERNAL_HOST:-localhost}
+      - EXTERNAL_PORT=${EXTERNAL_PORT:-8001}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/app/data
+      - ./citations.db:/app/citations.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional PostgreSQL database for production
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=deepresearch
+      - POSTGRES_USER=deepresearch
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-deepresearch123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    profiles:
+      - postgres
+
+volumes:
+  postgres_data:
