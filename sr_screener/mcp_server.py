@@ -234,7 +234,7 @@ def main(port=8001):
             "Set EXTERNAL_HOST environment variable to public hostname for production."
         )
     
-    external_url = f"https://{external_host}:{external_port}/sse/" if external_host != 'localhost' else f"http://localhost:{port}/sse/"
+    external_url = f"https://{external_host}:{external_port}/sse/" if external_host != 'localhost' else f"http://localhost:{external_port}/sse/"
     logger.info(f"External URL for Deep Research API: {external_url}")
     
     repl_slug = os.getenv('REPL_SLUG')
