@@ -12,20 +12,21 @@ async def analyze_deepresearch_ui():
     """Launch and analyze the DeepResearch2 Streamlit UI"""
     
     # First, let's launch the Streamlit app in the background
-    env = os.environ.copy()
-    env['PATH'] = f"{os.path.join(os.getcwd(), 'deepresearch_env', 'bin')}:{env['PATH']}"
+    import sys
+    from wait_for_server import wait_for_streamlit
     
     process = subprocess.Popen(
-        [os.path.join(os.getcwd(), 'deepresearch_env', 'bin', 'python'), 
-         'sr_screener/main.py', 'ui'],
-        env=env,
+        [sys.executable, 'sr_screener/main.py', 'ui'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     
-    # Wait for the server to start
+    # Wait for the server to start with proper health check
     print("Waiting for Streamlit server to start...")
-    time.sleep(5)
+    if not wait_for_streamlit(timeout=30):
+        print("Failed to start Streamlit server")
+        process.terminate()
+        return
     
     try:
         async with async_playwright() as p:
