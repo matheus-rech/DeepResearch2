@@ -229,8 +229,10 @@ def main(port=8001):
     external_port = os.getenv('EXTERNAL_PORT', str(port))
     
     if external_host == 'localhost':
-        logger.warning("Using localhost URL - this will not be accessible to OpenAI Deep Research API")
-        logger.warning("Set EXTERNAL_HOST environment variable to public hostname for production")
+        logger.warning(
+            "Using localhost URL - this will not be accessible to OpenAI Deep Research API.\n"
+            "Set EXTERNAL_HOST environment variable to public hostname for production."
+        )
     
     external_url = f"https://{external_host}:{external_port}/sse/" if external_host != 'localhost' else f"http://localhost:{port}/sse/"
     logger.info(f"External URL for Deep Research API: {external_url}")
