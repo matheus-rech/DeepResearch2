@@ -30,7 +30,8 @@ async def analyze_deepresearch_ui():
     try:
         async with async_playwright() as p:
             # Launch browser
-            browser = await p.chromium.launch(headless=False)
+            headless_mode = os.getenv("HEADLESS_MODE", "False").lower() in ("true", "1", "yes")
+            browser = await p.chromium.launch(headless=headless_mode)
             context = await browser.new_context(
                 viewport={'width': 1920, 'height': 1080}
             )
