@@ -73,7 +73,7 @@ ER  -
             return False
     except Exception as e:
         print(f"✗ Parser error: {e}")
-        if test_file.exists():
+        if test_file and test_file.exists():  # Check if test_file is not None
             test_file.unlink()
         return False
 
