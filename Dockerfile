@@ -25,9 +25,12 @@ USER appuser
 # Expose ports
 EXPOSE 8000 8001
 
+# Set default MCP server port
+ENV MCP_PORT=8001
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:${MCP_PORT}/health || exit 1
 
 # Default command - run both MCP server and Streamlit UI
 CMD ["python", "sr_screener/main.py", "both"]
