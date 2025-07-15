@@ -1,0 +1,22 @@
+{
+  "pico": {
+    "population": "Adults with treatment-resistant major depression",
+    "intervention": "MR-guided focused ultrasound (MRgFUS) to brain targets",
+    "comparator": "Standard care or sham procedure",
+    "outcome": "Depression severity scores\nResponse rates (≥50% improvement)\nSafety/adverse events",
+    "timeframe": "Follow-up at 12 months or more",
+    "study_type": "RCTs, cross-over trials"
+  },
+  "inclusion_criteria": [
+    "Study design: Randomized controlled trial",
+    "Published in English",
+    "Published in peer-reviewed journal"
+  ],
+  "exclusion_criteria": [
+    "Study design: Case report or case series",
+    "Study type: Review, systematic review, or meta-analysis",
+    "Publication type: Conference abstract or poster",
+    "Study protocols without results",
+    "Non-human studies"
+  ]
+}

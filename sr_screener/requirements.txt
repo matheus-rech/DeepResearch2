@@ -1,0 +1,21 @@
+# Core dependencies
+fastmcp>=2.9.0
+uvicorn[standard]>=0.34.3
+streamlit>=1.34
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+pandas>=2.2
+python-dotenv>=1.0
+
+# Parsing libraries
+lxml>=5.2
+rispy>=0.7
+python-dateutil>=2.9
+
+# OpenAI integration
+openai>=1.26
+httpx>=0.27
+
+# Additional utilities
+tqdm>=4.66
+beautifulsoup4>=4.12

@@ -1,0 +1,25 @@
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.12.14",
+    "beautifulsoup4>=4.13.4",
+    "fastmcp>=2.9.0",
+    "httpx>=0.28.1",
+    "llama-index-readers-papers>=0.3.2",
+    "lxml>=5.4.0",
+    "matplotlib>=3.10.3",
+    "openai>=1.91.0",
+    "pandas>=2.3.1",
+    "psycopg2-binary>=2.9.10",
+    "python-dateutil>=2.9.0.post0",
+    "python-dotenv>=1.1.1",
+    "rispy>=0.10.0",
+    "sqlalchemy>=2.0.41",
+    "streamlit>=1.46.1",
+    "tqdm>=4.67.1",
+    "trafilatura>=2.0.0",
+    "uvicorn>=0.34.3",
+]
