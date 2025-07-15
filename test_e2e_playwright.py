@@ -95,8 +95,9 @@ class TestServers:
         logger.info("Starting test servers...")
         
         # Start the combined server
+        main_py_path = Path(__file__).parent / "main.py"
         process = subprocess.Popen(
-            [sys.executable, "main.py", "sr-ui"],
+            [sys.executable, str(main_py_path), "sr-ui"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
