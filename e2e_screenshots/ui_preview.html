@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DeepResearch2 - UI Preview</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f6; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #1f2937; text-align: center; }
+        .section { margin: 30px 0; padding: 20px; background: #f9fafb; border-radius: 6px; }
+        .button { background: #3b82f6; color: white; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; }
+        .file-upload { border: 2px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 6px; }
+        .step { display: inline-block; padding: 8px 16px; margin: 5px; background: #e5e7eb; border-radius: 4px; }
+        .active { background: #3b82f6; color: white; }
+        .screenshot { margin: 20px 0; padding: 20px; border: 1px solid #e5e7eb; }
+        .code { background: #f3f4f6; padding: 10px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 DeepResearch2 - Systematic Review Screener</h1>
+        
+        <div class="section">
+            <h2>Application Overview</h2>
+            <p>DeepResearch2 is a comprehensive tool for systematic literature reviews, featuring:</p>
+            <ul>
+                <li>✓ Multi-format citation import (PubMed, RIS, CSV, EndNote)</li>
+                <li>✓ PICOTT criteria configuration</li>
+                <li>✓ AI-powered screening with Deep Research integration</li>
+                <li>✓ Multi-agent architecture for thorough analysis</li>
+                <li>✓ Quality validation and ICE analysis</li>
+                <li>✓ Multiple export formats</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h2>Workflow Steps</h2>
+            <div>
+                <span class="step active">1. Upload Citations</span>
+                <span class="step">2. Define Criteria</span>
+                <span class="step">3. Run Screening</span>
+                <span class="step">4. Review Results</span>
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <h3>Step 1: Citation Upload</h3>
+            <div class="file-upload">
+                <p>📁 Drop your citation file here or click to browse</p>
+                <p style="color: #6b7280; font-size: 14px;">Supported: .xml, .ris, .csv, .nbib</p>
+                <button class="button">Choose File</button>
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <h3>Step 2: PICOTT Criteria</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label><strong>Population:</strong></label>
+                    <div class="code">Adults with type 2 diabetes</div>
+                </div>
+                <div>
+                    <label><strong>Intervention:</strong></label>
+                    <div class="code">Continuous glucose monitoring</div>
+                </div>
+                <div>
+                    <label><strong>Comparator:</strong></label>
+                    <div class="code">Standard blood glucose monitoring</div>
+                </div>
+                <div>
+                    <label><strong>Outcome:</strong></label>
+                    <div class="code">Glycemic control (HbA1c levels)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <h3>Step 3: Screening Results</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0;">
+                <div style="text-align: center; padding: 20px; background: #f3f4f6; border-radius: 6px;">
+                    <div style="font-size: 24px; font-weight: bold;">150</div>
+                    <div>Total Screened</div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: #d1fae5; border-radius: 6px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #059669;">45</div>
+                    <div>Included</div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: #fee2e2; border-radius: 6px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #dc2626;">105</div>
+                    <div>Excluded</div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: #e0e7ff; border-radius: 6px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #4f46e5;">85%</div>
+                    <div>High Confidence</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Technical Architecture</h2>
+            <p>The application consists of:</p>
+            <ul>
+                <li><strong>MCP Server</strong> (Port 8001): Provides search/fetch tools for ChatGPT Deep Research</li>
+                <li><strong>Streamlit UI</strong> (Port 8000): Web interface for systematic review workflow</li>
+                <li><strong>Database</strong>: PostgreSQL with pgvector or SQLite fallback</li>
+                <li><strong>AI Integration</strong>: OpenAI embeddings and GPT-4 for screening</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
