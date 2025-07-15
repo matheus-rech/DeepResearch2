@@ -52,9 +52,16 @@ def capture_with_curl():
             logger.error("Server failed to start within 30 seconds")
             
             # Check server output
-            stdout, stderr = process.communicate(timeout=2)
-            logger.error(f"Server stdout: {stdout}")
-            logger.error(f"Server stderr: {stderr}")
+            try:
+                stdout, stderr = process.communicate(timeout=2)
+                logger.error(f"Server stdout: {stdout}")
+                logger.error(f"Server stderr: {stderr}")
+            except subprocess.TimeoutExpired:
+                logger.error("Server did not terminate within the timeout period (2 seconds).")
+                process.kill()
+                stdout, stderr = process.communicate()
+                logger.error(f"Server stdout after force kill: {stdout}")
+                logger.error(f"Server stderr after force kill: {stderr}")
             return
         
         # Capture HTML content
