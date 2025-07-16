@@ -34,7 +34,7 @@ def create_server():
     db.init_db()
     
     # Create FastMCP server
-    mcp = FastMCP("Systematic_Review_MCP_Server", instructions=server_instructions)
+    mcp = FastMCP("DeepResearchServer", instructions=server_instructions)
     
     @mcp.tool()
     async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, Any]:
@@ -178,7 +178,7 @@ def create_server():
         """
         return {
             "status": "healthy",
-            "server": "Systematic_Review_MCP_Server",
+            "server": "DeepResearchServer",
             "timestamp": str(time.time())
         }
     
@@ -221,9 +221,30 @@ def main(port=8001):
     """Main function to start the MCP server."""
     server = create_server()
     
+    @server.custom_route("/health", methods=["GET"])
+    async def health_endpoint(request):
+        """HTTP health check endpoint for production monitoring"""
+        from starlette.responses import JSONResponse
+        try:
+            tools = await server.get_tools()
+            return JSONResponse({
+                "status": "healthy",
+                "server": "DeepResearchServer",
+                "timestamp": str(time.time()),
+                "tools_count": len(tools)
+            })
+        except Exception as e:
+            return JSONResponse({
+                "status": "unhealthy",
+                "server": "DeepResearchServer",
+                "timestamp": str(time.time()),
+                "error": str(e)
+            }, status_code=500)
+    
     # Log server info
     logger.info(f"Starting Systematic Review MCP server on 0.0.0.0:{port}")
     logger.info("Server will be accessible via SSE transport")
+    logger.info(f"Health endpoint: http://0.0.0.0:{port}/health")
     logger.info(f"External URL: https://{os.getenv('REPL_SLUG', 'unknown')}-{port}.{os.getenv('REPL_OWNER', 'unknown')}.repl.co/sse/")
     
     # Start server with SSE transport

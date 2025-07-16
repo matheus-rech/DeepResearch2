@@ -5,7 +5,6 @@ Comprehensive UI test with Playwright - captures every step with screenshots
 import asyncio
 import subprocess
 import sys
-import time
 import os
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -71,8 +70,8 @@ async def comprehensive_ui_test():
                     print(f"🖱️  Clicking tab: {tab_text}")
                     await tab.click()
                     await page.wait_for_timeout(2000)
-                    await page.screenshot(path=SCREENSHOT_DIR / f"03_tab_{i+1}_{tab_text.replace(' ', '_').lower()}.png", full_page=True)
-                    print(f"✅ Screenshot 3.{i+1}: Tab '{tab_text}' captured")
+                    await page.screenshot(path=SCREENSHOT_DIR / f"03_tab_{i + 1}_{tab_text.replace(' ', '_').lower()}.png", full_page=True)
+                    print(f"✅ Screenshot 3.{i + 1}: Tab '{tab_text}' captured")
             
             # Test file upload interface
             print("📸 Step 4: Test file upload interface")
@@ -112,8 +111,8 @@ async def comprehensive_ui_test():
                             try:
                                 await button.click()
                                 await page.wait_for_timeout(2000)
-                                await page.screenshot(path=SCREENSHOT_DIR / f"07_sidebar_action_{i+1}.png", full_page=True)
-                                print(f"✅ Screenshot 7.{i+1}: Sidebar action captured")
+                                await page.screenshot(path=SCREENSHOT_DIR / f"07_sidebar_action_{i + 1}.png", full_page=True)
+                                print(f"✅ Screenshot 7.{i + 1}: Sidebar action captured")
                             except Exception as e:
                                 print(f"⚠️  Could not click button: {e}")
             
@@ -146,7 +145,7 @@ async def comprehensive_ui_test():
             # Generate summary report
             print("\n📋 UI Test Summary:")
             print("=" * 50)
-            print(f"🌐 Application URL: http://localhost:8000")
+            print("🌐 Application URL: http://localhost:8000")
             print(f"📝 Page Title: {title if title else 'Not detected'}")
             print(f"🏷️  Navigation Tabs: {len(tabs) if tabs else 0}")
             print(f"📁 File Upload: {'Available' if await file_upload.count() > 0 else 'Not found'}")

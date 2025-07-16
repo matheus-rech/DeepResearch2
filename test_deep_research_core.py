@@ -4,8 +4,6 @@ Direct test of core Deep Research functionality
 This proves the essential components are working
 """
 import sys
-import os
-import json
 from pathlib import Path
 
 # Add the sr_screener directory to path
@@ -36,13 +34,13 @@ def test_sample_citations_processing():
         # Display sample citation
         if citations:
             first_citation = citations[0]
-            print(f"\n📚 Sample Citation:")
+            print("\n📚 Sample Citation:")
             print(f"   Title: {first_citation.get('title', 'N/A')[:100]}...")
             print(f"   Year: {first_citation.get('year', 'N/A')}")
             print(f"   Journal: {first_citation.get('journal', 'N/A')}")
         
         # Test database storage
-        print(f"\n🗄️  Testing database storage...")
+        print("\n🗄️  Testing database storage...")
         with db.get_db() as database:
             # Clear existing test data
             database.query(db.Citation).delete()
@@ -99,7 +97,7 @@ def test_deep_research_screening():
         
         # Test if the function exists and can be called
         if hasattr(deep_research, 'run_systematic_screening'):
-            print(f"\n✅ Deep Research screening function is available")
+            print("\n✅ Deep Research screening function is available")
             print(f"✅ Function signature: {deep_research.run_systematic_screening.__name__}")
             
             # Get function parameters for verification
@@ -117,7 +115,7 @@ def test_deep_research_screening():
             citation_count = database.query(db.Citation).count()
             print(f"✅ Database ready for screening with {citation_count} citations")
         
-        print(f"✅ All Deep Research components are operational")
+        print("✅ All Deep Research components are operational")
         return True
         
     except Exception as e:
@@ -152,8 +150,8 @@ def test_screening_agents():
         
         # Test ICE analysis
         try:
-            import ice_critic
-            print(f"✅ ICE Critic module available for quality analysis")
+            import ice_critic  # noqa: F401
+            print("✅ ICE Critic module available for quality analysis")
         except ImportError:
             print("⚠️  ICE Critic not available")
         
@@ -181,8 +179,8 @@ def demonstrate_complete_workflow():
     for step in workflow_steps:
         print(f"   {step}")
     
-    print(f"\n🎉 WORKFLOW STATUS: FULLY OPERATIONAL")
-    print(f"📊 Ready for systematic review screening")
+    print("\n🎉 WORKFLOW STATUS: FULLY OPERATIONAL")
+    print("📊 Ready for systematic review screening")
     
     return True
 

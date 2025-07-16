@@ -228,7 +228,7 @@ class MultiAgentScreener:
                 },
                 {
                     "type": "mcp",
-                    "server_label": "Systematic_Review_MCP_Server",
+                    "server_label": "DeepResearchServer",
                     "server_url": self.mcp_url,
                     "require_approval": "never"
                 }

@@ -17,7 +17,7 @@ def show_screening_results():
     print("📚 CITATIONS TO SCREEN:")
     print("-" * 60)
     for i, row in df.iterrows():
-        print(f"Citation {i+1}:")
+        print(f"Citation {i + 1}:")
         print(f"  Title: {row['title']}")
         print(f"  Year: {row['year']}")
         print(f"  Journal: {row['journal']}")
@@ -55,8 +55,8 @@ def show_screening_results():
         criteria_matches = {
             'diabetes': 'diabetes' in title or 'diabetes' in abstract,
             'adults': 'adult' in title or 'adult' in abstract,
-            'cgm': ('glucose monitoring' in title or 'glucose monitoring' in abstract or 
-                   'cgm' in title or 'cgm' in abstract or 'continuous glucose' in title or 'continuous glucose' in abstract),
+            'cgm': ('glucose monitoring' in title or 'glucose monitoring' in abstract
+                    or 'cgm' in title or 'cgm' in abstract or 'continuous glucose' in title or 'continuous glucose' in abstract),
             'comparison': 'standard' in abstract or 'compared' in abstract or 'control' in abstract,
             'outcomes': any(term in abstract for term in ['hba1c', 'glycemic control', 'quality of life', 'outcomes']),
             'timeframe': any(term in abstract for term in ['month', 'follow-up', 'weeks']),
@@ -69,10 +69,9 @@ def show_screening_results():
         
         # Decision logic
         if score >= 5:  # Must meet most criteria
-            decision = "INCLUDED"
             reason = f"Meets {score}/{total_criteria} criteria: " + ", ".join([k for k, v in criteria_matches.items() if v])
             included.append({
-                'citation': i+1,
+                'citation': i + 1,
                 'title': row['title'],
                 'year': row['year'],
                 'journal': row['journal'],
@@ -81,10 +80,10 @@ def show_screening_results():
                 'matches': criteria_matches
             })
         else:
-            decision = "EXCLUDED"
+            pass  # EXCLUDED
             reason = f"Only meets {score}/{total_criteria} criteria: " + ", ".join([k for k, v in criteria_matches.items() if v])
             excluded.append({
-                'citation': i+1,
+                'citation': i + 1,
                 'title': row['title'],
                 'year': row['year'],
                 'journal': row['journal'],

@@ -168,16 +168,26 @@ def test_mcp_validation():
     try:
         sys.path.append('sr_screener')
         import mcp_server
+        import asyncio
         
-        server = mcp_server.create_server()
-        print("✓ MCP server instance created")
+        async def test_tools():
+            server = mcp_server.create_server()
+            print("✓ MCP server instance created")
+            
+            tools = await server.get_tools()
+            if tools and len(tools) > 0:
+                print(f"✓ MCP tools registered ({len(tools)} tools)")
+                for tool in tools:
+                    if isinstance(tool, dict):
+                        print(f"  - Tool: {tool.get('name', 'unknown')}")
+                    else:
+                        print(f"  - Tool: {tool}")
+                return True
+            else:
+                print("✗ MCP tools not properly registered")
+                return False
         
-        if hasattr(server, 'search') and hasattr(server, 'fetch'):
-            print("✓ MCP tools registered (search, fetch)")
-            return True
-        else:
-            print("✗ MCP tools not properly registered")
-            return False
+        return asyncio.run(test_tools())
     except Exception as e:
         print(f"✗ MCP tools test failed: {e}")
         return False

@@ -13,30 +13,34 @@ def test_fastmcp_registration():
     
     try:
         from fastmcp import FastMCP
+        import asyncio
         
-        test_server = FastMCP("Test Server")
-        print("✓ FastMCP server created")
+        async def test_async_registration():
+            test_server = FastMCP("Test Server")
+            print("✓ FastMCP server created")
+            
+            tool_methods = [m for m in dir(test_server) if 'tool' in m.lower()]
+            print(f"Available tool methods: {tool_methods}")
+            
+            tools = await test_server.get_tools()
+            print(f"Initial tools: {len(tools)} tools")
+            
+            @test_server.tool()
+            def test_tool(message: str) -> str:
+                """A test tool"""
+                return f"Test: {message}"
+            
+            tools_after = await test_server.get_tools()
+            print(f"Tools after registration: {len(tools_after)} tools")
+            
+            if len(tools_after) > len(tools):
+                print("✓ Tool registration working")
+                return True
+            else:
+                print("✗ Tool registration failed")
+                return False
         
-        tool_methods = [m for m in dir(test_server) if 'tool' in m.lower()]
-        print(f"Available tool methods: {tool_methods}")
-        
-        tools = test_server.get_tools()
-        print(f"Initial tools: {tools}")
-        
-        @test_server.tool()
-        def test_tool(message: str) -> str:
-            """A test tool"""
-            return f"Test: {message}"
-        
-        tools_after = test_server.get_tools()
-        print(f"Tools after registration: {tools_after}")
-        
-        if len(tools_after) > len(tools):
-            print("✓ Tool registration working")
-            return True
-        else:
-            print("✗ Tool registration failed")
-            return False
+        return asyncio.run(test_async_registration())
             
     except Exception as e:
         print(f"✗ FastMCP test failed: {e}")
@@ -49,21 +53,28 @@ def test_mcp_server_tools():
     
     try:
         import mcp_server
+        import asyncio
         
-        server = mcp_server.create_server()
-        print("✓ MCP server created")
+        async def test_async_tools():
+            server = mcp_server.create_server()
+            print("✓ MCP server created")
+            
+            tools = await server.get_tools()
+            print(f"Registered tools: {len(tools)} tools found")
+            
+            if tools and len(tools) > 0:
+                print(f"✓ Found {len(tools)} registered tools")
+                for tool in tools:
+                    if isinstance(tool, dict):
+                        print(f"  - Tool: {tool.get('name', 'unknown')}")
+                    else:
+                        print(f"  - Tool: {tool}")
+                return True
+            else:
+                print("✗ No tools registered")
+                return False
         
-        tools = server.get_tools()
-        print(f"Registered tools: {tools}")
-        
-        if tools and len(tools) > 0:
-            print(f"✓ Found {len(tools)} registered tools")
-            for tool in tools:
-                print(f"  - Tool: {tool.get('name', 'unknown')}")
-            return True
-        else:
-            print("✗ No tools registered")
-            return False
+        return asyncio.run(test_async_tools())
             
     except Exception as e:
         print(f"✗ MCP server test failed: {e}")

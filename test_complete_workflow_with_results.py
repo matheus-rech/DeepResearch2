@@ -5,7 +5,6 @@ Complete workflow test that shows ACTUAL RESULTS from Deep Research screening
 import asyncio
 import subprocess
 import sys
-import time
 import os
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -96,7 +95,7 @@ async def complete_workflow_with_results():
                 if i < await text_areas.count():
                     await text_areas.nth(i).fill(value)
                     await page.wait_for_timeout(1000)
-                    print(f"✅ Filled criteria {i+1}: {value[:30]}...")
+                    print(f"✅ Filled criteria {i + 1}: {value[:30]}...")
             
             await page.screenshot(path=SCREENSHOT_DIR / "04_criteria_filled.png", full_page=True)
             print("✅ All PICOTT criteria filled")

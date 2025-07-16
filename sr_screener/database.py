@@ -11,7 +11,7 @@ from typing import List, Dict, Optional, Any
 
 import pandas as pd
 from sqlalchemy import create_engine, text, Column, String, Text, Integer, DateTime, JSON
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -444,8 +444,8 @@ def generate_citation_embeddings():
         for citation in citations:
             try:
                 # Create text for embedding from title and abstract
-                text = f"{citation.title}\n\n{citation.abstract or ''}"
-                embedding = generate_embedding(text)
+                citation_text = f"{citation.title}\n\n{citation.abstract or ''}"
+                embedding = generate_embedding(citation_text)
                 
                 if embedding:
                     citation.embedding = json.dumps(embedding)
@@ -462,12 +462,11 @@ def generate_citation_embeddings():
         # Create text index for embedding column (works for all databases)
         if stats["generated"] > 0:
             try:
-                with engine.connect() as conn:
+                with engine.begin() as conn:
                     conn.execute(text("""
                         CREATE INDEX IF NOT EXISTS idx_citations_embedding_text 
                         ON citations (embedding);
                     """))
-                    conn.commit()
                     logger.info("Created embedding text index")
             except Exception as e:
                 logger.warning(f"Could not create embedding index: {e}")

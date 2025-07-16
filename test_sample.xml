@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<records>
+    <record>
+        <database name="PubMed" path="pubmed_result.txt">PubMed</database>
+        <source-app name="EndNote" version="20.0">EndNote</source-app>
+        <rec-number>1</rec-number>
+        <foreign-keys>
+            <key app="EN" db-id="pubmed">12345678</key>
+        </foreign-keys>
+        <ref-type name="Journal Article">17</ref-type>
+        <contributors>
+            <authors>
+                <author>Smith, John A.</author>
+                <author>Johnson, Mary B.</author>
+                <author>Brown, David C.</author>
+            </authors>
+        </contributors>
+        <titles>
+            <title>Machine Learning Applications in Healthcare: A Comprehensive Review</title>
+        </titles>
+        <periodical>
+            <full-title>Journal of Medical Informatics</full-title>
+        </periodical>
+        <pages>123-135</pages>
+        <volume>45</volume>
+        <number>3</number>
+        <dates>
+            <year>2023</year>
+        </dates>
+        <isbn>10.1234/jmi.2023.123</isbn>
+        <abstract>This comprehensive review examines the current state of machine learning applications in healthcare settings. We analyzed 150 studies published between 2020-2023, focusing on diagnostic imaging, drug discovery, and personalized treatment plans. Our findings indicate significant promise in these areas, though challenges remain in data privacy, algorithm transparency, and clinical integration.</abstract>
+    </record>
+    
+    <record>
+        <database name="PubMed" path="pubmed_result.txt">PubMed</database>
+        <source-app name="EndNote" version="20.0">EndNote</source-app>
+        <rec-number>2</rec-number>
+        <foreign-keys>
+            <key app="EN" db-id="pubmed">87654321</key>
+        </foreign-keys>
+        <ref-type name="Journal Article">17</ref-type>
+        <contributors>
+            <authors>
+                <author>Wilson, Carol</author>
+                <author>Taylor, Emma</author>
+            </authors>
+        </contributors>
+        <titles>
+            <title>Deep Learning in Medical Image Analysis: Current Trends and Future Directions</title>
+        </titles>
+        <periodical>
+            <full-title>Medical Image Analysis</full-title>
+        </periodical>
+        <pages>102089</pages>
+        <volume>67</volume>
+        <dates>
+            <year>2023</year>
+        </dates>
+        <isbn>10.1016/j.media.2023.102089</isbn>
+        <abstract>Medical image analysis has been revolutionized by deep learning techniques. This systematic review analyzes 200 papers from 2019-2023 focusing on convolutional neural networks, transformers, and generative models. We found that deep learning achieves state-of-the-art performance in radiology, pathology, and ophthalmology applications.</abstract>
+    </record>
+</records>

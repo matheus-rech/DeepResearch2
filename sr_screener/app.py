@@ -149,11 +149,12 @@ def show_upload_step():
         - **RIS** (.ris) - From EndNote, Mendeley, etc.
         - **CSV** (.csv) - Generic format with standard columns
         - **EndNote XML** (.xml) - From EndNote library
+        - **PubMed Text** (.txt) - From PubMed abstract export
         """)
 
         uploaded_file = st.file_uploader(
             "Choose a citation file",
-            type=['xml', 'ris', 'csv', 'nbib'],
+            type=['xml', 'ris', 'csv', 'nbib', 'txt'],
             help="Upload your exported citations from reference management software"
         )
 
@@ -415,16 +416,17 @@ def show_upload_step():
                             st.write(f"📅 Publication Years: {min_year}-{max_year}")
                         else:
                             try:
-                                year_range = st.slider("Publication Year Range", 
-                                                     min_value=min_year, 
-                                                     max_value=max_year, 
-                                                     value=(min_year, max_year),
-                                                     key="year_range_slider")
-                            except Exception as e:
+                                year_range = st.slider(
+                                    "Publication Year Range",
+                                    min_value=min_year,
+                                    max_value=max_year,
+                                    value=(min_year, max_year),
+                                    key="year_range_slider")
+                            except Exception:
                                 # Fallback if slider fails
                                 year_range = (min_year, max_year)
                                 st.write(f"📅 Publication Years: {min_year}-{max_year}")
-                                st.caption(f"Year filter disabled due to data range")
+                                st.caption("Year filter disabled due to data range")
                     else:
                         year_range = None
 
@@ -917,11 +919,11 @@ def show_results_step():
         st.metric("Total Screened", stats["total_screened"])
     with col2:
         st.metric("Included", stats["included"], 
-                  delta=f"{stats['inclusion_rate']*100:.1f}%",
+                  delta=f"{stats['inclusion_rate'] * 100:.1f}%",
                   delta_color="normal")
     with col3:
         st.metric("Excluded", stats["excluded"],
-                  delta=f"{(1-stats['inclusion_rate'])*100:.1f}%",
+                  delta=f"{(1 - stats['inclusion_rate']) * 100:.1f}%",
                   delta_color="inverse")
     with col4:
         confidence = stats["confidence_breakdown"]

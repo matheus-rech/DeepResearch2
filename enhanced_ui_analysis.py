@@ -102,13 +102,13 @@ async def analyze_streamlit_app():
                 print(f"✅ Found {len(tabs)} tabs")
                 for i, tab in enumerate(tabs):
                     tab_text = await tab.text_content()
-                    print(f"   - Tab {i+1}: {tab_text}")
+                    print(f"   - Tab {i + 1}: {tab_text}")
                     
                     # Click each tab and take screenshot
                     await tab.click()
                     await page.wait_for_timeout(1000)
-                    await page.screenshot(path=f"screenshots/tab_{i+1}_{tab_text.replace(' ', '_')}.png")
-                    print(f"     ✅ Clicked and captured tab {i+1}")
+                    await page.screenshot(path=f"screenshots/tab_{i + 1}_{tab_text.replace(' ', '_')}.png")
+                    print(f"     ✅ Clicked and captured tab {i + 1}")
             else:
                 print("❌ No tabs found")
             
@@ -190,7 +190,7 @@ async def analyze_streamlit_app():
                 "screenshots_captured": [
                     "test_app_main.png",
                     "sidebar_view.png" if await sidebar.is_visible() else None,
-                    *[f"tab_{i+1}_{tab.text_content().replace(' ', '_')}.png" for i, tab in enumerate(tabs)]
+                    *[f"tab_{i + 1}_{tab.text_content().replace(' ', '_')}.png" for i, tab in enumerate(tabs)]
                 ]
             }
             
