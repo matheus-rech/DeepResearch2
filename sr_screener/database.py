@@ -15,10 +15,15 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+try:
+    from .database_url import get_database_url
+except ImportError:
+    from database_url import get_database_url
+
 logger = logging.getLogger(__name__)
 
 # Database configuration
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASE_URL = get_database_url()
 Base = declarative_base()
 
 # OpenAI client for embeddings

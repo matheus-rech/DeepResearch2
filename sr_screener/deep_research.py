@@ -93,7 +93,11 @@ Focus on extracting EXACT quotes that support each PICOTT element and criterion 
 
     # Configure MCP server URL - needs to be accessible from OpenAI's servers
     # In production, this should be your deployed server URL
-    if os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
+    if os.getenv("HEROKU_APP_NAME"):
+        # Running on Heroku - use the public URL
+        app_name = os.getenv("HEROKU_APP_NAME")
+        mcp_url = f"https://{app_name}.herokuapp.com/sse/"
+    elif os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
         # Running on Replit - use the public URL with port
         repl_slug = os.getenv("REPL_SLUG")
         repl_owner = os.getenv("REPL_OWNER")
