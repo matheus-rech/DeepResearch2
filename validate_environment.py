@@ -43,8 +43,13 @@ def check_environment() -> Tuple[bool, List[str], List[str]]:
     streamlit_host = os.environ.get("STREAMLIT_HOST", "0.0.0.0")
     streamlit_port = os.environ.get("STREAMLIT_PORT", "8000")
     
-    if mcp_port == streamlit_port:
-        errors.append(f"MCP_PORT ({mcp_port}) and STREAMLIT_PORT ({streamlit_port}) cannot be the same")
+    try:
+        mcp_port_int = int(mcp_port)
+        streamlit_port_int = int(streamlit_port)
+        if mcp_port_int == streamlit_port_int:
+            errors.append(f"MCP_PORT ({mcp_port}) and STREAMLIT_PORT ({streamlit_port}) cannot be the same")
+    except ValueError:
+        errors.append(f"Invalid port value: MCP_PORT ({mcp_port}) or STREAMLIT_PORT ({streamlit_port}) is not a valid integer")
     
     is_valid = len(errors) == 0
     return is_valid, errors, warnings
