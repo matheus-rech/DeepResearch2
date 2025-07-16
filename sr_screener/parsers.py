@@ -446,7 +446,7 @@ def detect_format(filename: str, content: bytes) -> str:
             return 'ris'
         elif '<PubmedArticle>' in content_str:
             return 'pubmed_xml'
-        elif content_str.strip().startswith('PMID-') and any(pattern in content_str for pattern in ['TI  -', 'AB  -', 'FAU -']):
+        elif content_str.strip().startswith('PMID-') and any(pattern in content_str for pattern in ['TI  -', 'AB  -', 'FAU  -']):
             return 'pubmed_text'  # MEDLINE format with PMID- prefix
         elif content_str.strip().startswith('PMID-'):
             return 'pubmed_nbib'  # NBIB format
