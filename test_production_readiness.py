@@ -72,7 +72,7 @@ def test_mcp_server_creation():
         server = mcp_server.create_server()
         print("✅ MCP server created successfully")
         
-        tools = asyncio.get_event_loop().run_until_complete(server.get_tools())
+        tools = asyncio.run(server.get_tools())
         expected_tools = ["search", "fetch", "health_check", "corpus_info"]
         
         tool_names = []
@@ -139,7 +139,7 @@ def test_vector_store_mode():
         server = main.create_server()
         print("✅ Vector store server created successfully")
         
-        tools = asyncio.get_event_loop().run_until_complete(server.get_tools())
+        tools = asyncio.run(server.get_tools())
         tool_names = []
         for tool in tools:
             if hasattr(tool, 'name'):
