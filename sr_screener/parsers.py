@@ -379,17 +379,23 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
                 
                 citation['title'] = parts[1].strip()
                 
+                # Attempt to extract journal and year from parts[2] or parts[3]
                 journal_part = parts[2]
                 
                 # Extract journal name (everything before year)
                 journal_match = re.match(r'(.+?)\.\s*(19|20)\d{2}', journal_part)
                 if journal_match:
                     citation['journal'] = journal_match.group(1).strip()
-                    
+                
                 # Extract year from journal part
                 year_match = re.search(r'\b(19|20)\d{2}\b', journal_part)
                 if year_match:
                     citation['year'] = int(year_match.group())
+                elif len(parts) > 3:  # Check parts[3] if year is not in parts[2]
+                    journal_part = parts[3]
+                    year_match = re.search(r'\b(19|20)\d{2}\b', journal_part)
+                    if year_match:
+                        citation['year'] = int(year_match.group())
             else:
                 citation['title'] = content.split('.')[0] if '.' in content else content
         
