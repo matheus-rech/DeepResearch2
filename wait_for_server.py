@@ -7,7 +7,6 @@ Replaces unreliable time.sleep() patterns with proper health checks.
 import time
 import requests
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
