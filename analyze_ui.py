@@ -4,7 +4,6 @@ Playwright script to analyze DeepResearch2 UI
 """
 import asyncio
 import subprocess
-import time
 import os
 from playwright.async_api import async_playwright
 
@@ -59,7 +58,7 @@ async def analyze_deepresearch_ui():
             try:
                 title = await page.locator("h1, [data-testid='stTitle']").first.text_content()
                 print(f"✓ Title: {title}")
-            except:
+            except Exception:
                 print("✗ No title found")
             
             # Check for sidebar
@@ -129,9 +128,9 @@ async def analyze_deepresearch_ui():
             print("=" * 50)
             print("DeepResearch2 UI Analysis Report")
             print("=" * 50)
-            print(f"• Application Type: Streamlit Web App")
-            print(f"• URL: http://localhost:8000")
-            print(f"• Main Features Detected:")
+            print("• Application Type: Streamlit Web App")
+            print("• URL: http://localhost:8000")
+            print("• Main Features Detected:")
             print(f"  - File Upload Capability: {'Yes' if file_uploaders > 0 else 'No'}")
             print(f"  - Data Tables: {'Yes' if tables > 0 else 'No'}")
             print(f"  - Interactive Tabs: {'Yes' if tabs else 'No'}")

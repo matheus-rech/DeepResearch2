@@ -126,7 +126,7 @@ async def analyze_streamlit_app():
                         await page.wait_for_timeout(500)
                         clickable_buttons.append(button_text.strip())
                         print(f"   ✅ Successfully clicked button: {button_text.strip()}")
-                    except Exception as e:
+                    except Exception:
                         print(f"   ❌ Could not click button: {button_text.strip()}")
             
             # Test file upload
@@ -216,7 +216,7 @@ async def analyze_streamlit_app():
             print(f"   {'✅' if report['functionality']['interactive_buttons'] > 0 else '❌'} Interactive Buttons: {report['functionality']['interactive_buttons']}")
             print(f"   {'✅' if report['functionality']['file_upload_available'] else '❌'} File Upload: {'Available' if report['functionality']['file_upload_available'] else 'Not available'}")
             
-            print(f"\n⚡ Performance:")
+            print("\n⚡ Performance:")
             print(f"   📊 Load Time: {report['performance']['loadTime']}ms")
             print(f"   🏗️ DOM Ready: {report['performance']['domReady']}ms")
             print(f"   📦 Resources: {report['performance']['resourcesLoaded']}")

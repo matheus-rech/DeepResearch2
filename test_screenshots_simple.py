@@ -60,7 +60,7 @@ async def capture_screenshots():
                 await page.click('button[role="tab"]:has-text("Search Academic Databases")')
                 await page.wait_for_timeout(1000)
                 await page.screenshot(path=str(SCREENSHOT_DIR / "03_academic_search.png"), full_page=True)
-            except:
+            except Exception:
                 logger.info("Academic search tab not found")
             
             # 4. Try sample data workflow
@@ -92,7 +92,7 @@ ER  -
                 await page.click('button:has-text("Parse")', timeout=3000)
                 await page.wait_for_timeout(2000)
                 await page.screenshot(path=str(SCREENSHOT_DIR / "05_parse_results.png"), full_page=True)
-            except:
+            except Exception:
                 logger.info("Parse button not found or clickable")
             
             # Clean up test file

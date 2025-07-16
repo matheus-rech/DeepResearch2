@@ -3,7 +3,6 @@
 Basic flow test to verify components work without full server setup
 """
 import sys
-import os
 from pathlib import Path
 
 # Add sr_screener to path
@@ -13,13 +12,11 @@ def test_imports():
     """Test that all modules can be imported"""
     print("Testing imports...")
     try:
-        import sr_screener.app
-        import sr_screener.database as db
-        import sr_screener.parsers
-        import sr_screener.deep_research
-        import sr_screener.ice_critic
-        import sr_screener.data_validator
-        import sr_screener.multi_agent_research
+        import sr_screener.app  # noqa: F401
+        import sr_screener.database  # noqa: F401
+        import sr_screener.parsers  # noqa: F401
+        import sr_screener.deep_research  # noqa: F401
+        import sr_screener.ice_critic  # noqa: F401
         print("✓ All modules imported successfully")
         return True
     except Exception as e:

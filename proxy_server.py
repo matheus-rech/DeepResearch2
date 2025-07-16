@@ -75,8 +75,8 @@ async def proxy_handler(request):
     # Create session and make request
     async with aiohttp.ClientSession() as session:
         # Copy headers, removing hop-by-hop headers
-        headers = {k: v for k, v in request.headers.items() 
-                  if k.lower() not in ['host', 'connection', 'upgrade', 'transfer-encoding']}
+        headers = {k: v for k, v in request.headers.items()
+                   if k.lower() not in ['host', 'connection', 'upgrade', 'transfer-encoding']}
         
         # Make the request
         try:
@@ -92,7 +92,7 @@ async def proxy_handler(request):
                 
                 # Copy response headers, removing hop-by-hop headers
                 response_headers = {k: v for k, v in resp.headers.items()
-                                  if k.lower() not in ['connection', 'transfer-encoding', 'content-encoding']}
+                                    if k.lower() not in ['connection', 'transfer-encoding', 'content-encoding']}
                 
                 return web.Response(
                     body=body,

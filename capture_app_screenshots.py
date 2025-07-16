@@ -6,7 +6,6 @@ This script starts the server, captures screenshots, and generates a report
 import subprocess
 import time
 import sys
-import os
 from pathlib import Path
 import logging
 import requests
@@ -235,7 +234,7 @@ def main():
     
     files = list(SCREENSHOT_DIR.glob("*"))
     if files:
-        logger.info(f"📄 Generated files:")
+        logger.info("📄 Generated files:")
         for f in files:
             logger.info(f"   - {f.name}")
     

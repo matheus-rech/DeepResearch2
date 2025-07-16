@@ -3,7 +3,6 @@
 Comprehensive End-to-End Tests for DeepResearch2 using Playwright
 Covers all user flows and captures screenshots of each page/state
 """
-import os
 import sys
 import time
 import json
@@ -118,7 +117,7 @@ class TestServers:
                 if resp.status_code == 200:
                     logger.info("Streamlit server is ready")
                     break
-            except:
+            except Exception:
                 if i == max_retries - 1:
                     raise Exception("Streamlit server failed to start")
                 time.sleep(2)
@@ -458,5 +457,5 @@ if __name__ == "__main__":
     
     logger.info(f"E2E tests completed with exit code: {exit_code}")
     print(f"\nTest screenshots saved to: {SCREENSHOT_DIR}")
-    print(f"Test report available at: e2e_test_report.html")
-    print(f"Test logs available at: e2e_test_log.txt")
+    print("Test report available at: e2e_test_report.html")
+    print("Test logs available at: e2e_test_log.txt")

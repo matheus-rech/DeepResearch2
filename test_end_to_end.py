@@ -7,7 +7,6 @@ import sys
 import time
 import requests
 import subprocess
-import signal
 from pathlib import Path
 
 sys.path.append('sr_screener')
@@ -202,9 +201,9 @@ def main():
     total = len(tests)
     
     for test_name, test_func in tests:
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"Running: {test_name}")
-        print('='*50)
+        print('=' * 50)
         
         try:
             if test_func():
@@ -215,9 +214,9 @@ def main():
         except Exception as e:
             print(f"✗ {test_name} ERROR: {e}")
     
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"=== FINAL RESULTS: {passed}/{total} tests passed ===")
-    print('='*50)
+    print('=' * 50)
     
     if passed == total:
         print("🎉 All tests passed! DeepResearch2 is ready for production.")

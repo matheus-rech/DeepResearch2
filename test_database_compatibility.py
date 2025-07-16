@@ -2,12 +2,12 @@
 """
 Test script to verify database compatibility fixes
 """
-import os
 import sys
+import pandas as pd
+
 sys.path.append('sr_screener')
 
-import database as db
-import pandas as pd
+import database as db  # noqa: E402
 
 def test_database_init():
     """Test database initialization with SQLite"""

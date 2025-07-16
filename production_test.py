@@ -104,9 +104,9 @@ def main():
     total = len(tests)
     
     for test_name, test_func in tests:
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"Running: {test_name}")
-        print('='*50)
+        print('=' * 50)
         
         try:
             if test_func():
@@ -117,9 +117,9 @@ def main():
         except Exception as e:
             print(f"✗ {test_name} ERROR: {e}")
     
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"=== PRODUCTION READINESS: {passed}/{total} tests passed ===")
-    print('='*50)
+    print('=' * 50)
     
     if passed == total:
         print("🚀 DeepResearch2 is production ready!")

@@ -2,10 +2,8 @@
 """
 Script to run end-to-end tests with proper setup
 """
-import os
 import sys
 import subprocess
-import time
 from pathlib import Path
 
 # Add sr_screener to path
@@ -35,7 +33,7 @@ def setup_environment():
         if resp.status_code == 200:
             print("Warning: Streamlit server already running on port 8000")
             return False
-    except:
+    except Exception:
         pass
     
     return True
@@ -45,7 +43,7 @@ def main():
     print("=== DeepResearch2 End-to-End Tests ===")
     
     # Setup environment
-    should_start_servers = setup_environment()
+    setup_environment()
     
     # Run the tests
     print("\nRunning Playwright E2E tests...")
@@ -58,9 +56,9 @@ def main():
     
     # Show results location
     print("\n=== Test Results ===")
-    print(f"Screenshots: ./e2e_screenshots/")
-    print(f"Test report: ./e2e_test_report.html")
-    print(f"Test logs: ./e2e_test_log.txt")
+    print("Screenshots: ./e2e_screenshots/")
+    print("Test report: ./e2e_test_report.html")
+    print("Test logs: ./e2e_test_log.txt")
     
     return result.returncode
 

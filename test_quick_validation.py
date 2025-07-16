@@ -11,13 +11,13 @@ def test_imports():
     print("=== Testing Module Imports ===")
     
     try:
-        import main
+        import main  # noqa: F401
         print("✓ main.py imports successfully")
         
         sys.path.append('sr_screener')
-        import app
-        import database
-        import mcp_server
+        import app  # noqa: F401
+        import database  # noqa: F401
+        import mcp_server  # noqa: F401
         print("✓ sr_screener modules import successfully")
         
         return True
