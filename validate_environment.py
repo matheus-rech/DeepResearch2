@@ -1,28 +1,67 @@
 #!/usr/bin/env python3
 """
 Environment validation script for DeepResearch2
-Validates required environment variables and provides helpful error messages
+Validates required environment variables, connections, and provides helpful error messages
 """
 
 import os
 import sys
-from typing import List, Tuple
+import logging
+from typing import List, Tuple, Dict, Any
 
-def check_environment() -> Tuple[bool, List[str], List[str]]:
-    """
-    Check environment configuration for DeepResearch2
+# Set up logging
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# Define required ports
+REQUIRED_PORTS = [8000, 8001]  # Default ports for Streamlit and MCP
+
+def validate_database_connection() -> Tuple[bool, str]:
+    """Check if database connection is available by attempting to connect."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        return False, "DATABASE_URL not set - using SQLite database"
     
-    Returns:
-        Tuple of (is_valid, errors, warnings)
-    """
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.exc import SQLAlchemyError
+        engine = create_engine(database_url)
+        with engine.connect():
+            # Connection is implicitly checked by entering the 'with' block
+            pass
+        return True, "Database connection successful"
+    except ImportError:
+        return False, "SQLAlchemy is not installed. Cannot validate database connection."
+    except SQLAlchemyError as e:
+        return False, f"Database validation failed: {e}"
+
+def validate_openai_key() -> Tuple[bool, List[str], List[str]]:
+    """Check if OpenAI API keys are available and valid"""
     errors = []
     warnings = []
     
+    # Primary OpenAI key
     openai_key = os.environ.get("OPENAI_API_KEY")
     if not openai_key:
         errors.append("OPENAI_API_KEY is required for all modes")
     elif openai_key == "your_openai_api_key_here":
         errors.append("OPENAI_API_KEY contains placeholder value - please set your actual API key")
+    
+    # Secondary OpenAI key (optional)
+    openai_key_2 = os.environ.get("OPENAI_API_KEY_2")
+    if openai_key_2 and openai_key_2 == "your_secondary_openai_api_key_here":
+        warnings.append("OPENAI_API_KEY_2 contains placeholder value")
+    
+    is_valid = len(errors) == 0
+    return is_valid, errors, warnings
+
+def check_vector_store() -> List[str]:
+    """Check vector store configuration"""
+    warnings = []
     
     vector_store_id = os.environ.get("VECTOR_STORE_ID")
     if not vector_store_id:
@@ -30,14 +69,17 @@ def check_environment() -> Tuple[bool, List[str], List[str]]:
     elif vector_store_id == "your_vector_store_id_here":
         warnings.append("VECTOR_STORE_ID contains placeholder value - vector store mode may not work correctly")
     
-    openai_key_2 = os.environ.get("OPENAI_API_KEY_2")
-    if openai_key_2 and openai_key_2 == "your_secondary_openai_api_key_here":
-        warnings.append("OPENAI_API_KEY_2 contains placeholder value")
+    return warnings
+
+def check_required_ports() -> Tuple[List[int], List[str], List[str]]:
+    """Check if required ports are available and properly configured."""
+    import socket
     
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        warnings.append("DATABASE_URL not set - using SQLite database")
+    errors = []
+    warnings = []
+    available_ports = []
     
+    # Check port configuration
     mcp_port = os.environ.get("MCP_PORT", "8001")
     streamlit_port = os.environ.get("STREAMLIT_PORT", "8000")
     
@@ -48,9 +90,79 @@ def check_environment() -> Tuple[bool, List[str], List[str]]:
             errors.append(f"MCP_PORT ({mcp_port}) and STREAMLIT_PORT ({streamlit_port}) cannot be the same")
     except ValueError:
         errors.append(f"Invalid port value: MCP_PORT ({mcp_port}) or STREAMLIT_PORT ({streamlit_port}) is not a valid integer")
+        return [], errors, warnings
     
-    is_valid = len(errors) == 0
-    return is_valid, errors, warnings
+    # Check port availability
+    required_ports = [mcp_port_int, streamlit_port_int]
+    
+    for port in required_ports:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                # If a port is in use, bind() will raise an OSError
+                s.bind(("127.0.0.1", port))
+                available_ports.append(port)
+            except OSError:
+                warnings.append(f"Port {port} is already in use and not available")
+    
+    return available_ports, errors, warnings
+
+def check_environment() -> Tuple[bool, List[str], List[str]]:
+    """
+    Check environment configuration for DeepResearch2
+    
+    Returns:
+        Tuple of (is_valid, errors, warnings)
+    """
+    all_errors = []
+    all_warnings = []
+    
+    # Check OpenAI API keys
+    openai_valid, openai_errors, openai_warnings = validate_openai_key()
+    all_errors.extend(openai_errors)
+    all_warnings.extend(openai_warnings)
+    
+    # Check vector store configuration
+    vector_warnings = check_vector_store()
+    all_warnings.extend(vector_warnings)
+    
+    # Check ports
+    available_ports, port_errors, port_warnings = check_required_ports()
+    all_errors.extend(port_errors)
+    all_warnings.extend(port_warnings)
+    
+    # Check database connection
+    db_ok, db_message = validate_database_connection()
+    if not db_ok:
+        all_warnings.append(db_message)
+    
+    is_valid = len(all_errors) == 0
+    return is_valid, all_errors, all_warnings
+
+def generate_environment_report() -> Dict[str, Any]:
+    """Generate comprehensive environment validation report"""
+    is_valid, errors, warnings = check_environment()
+    
+    # Database check
+    db_ok, db_message = validate_database_connection()
+    
+    # OpenAI key check
+    openai_valid, _, _ = validate_openai_key()
+    
+    # Port availability
+    available_ports, _, _ = check_required_ports()
+    
+    report = {
+        "valid": is_valid,
+        "errors": errors,
+        "warnings": warnings,
+        "details": {
+            "database_ok": db_ok,
+            "openai_ok": openai_valid,
+            "available_ports": available_ports,
+        }
+    }
+    
+    return report
 
 def print_environment_status():
     """Print environment validation results"""
@@ -67,6 +179,15 @@ def print_environment_status():
         print("\n⚠️  WARNINGS (recommended to fix):")
         for warning in warnings:
             print(f"  • {warning}")
+    
+    # Print detailed status
+    report = generate_environment_report()
+    details = report["details"]
+    
+    print("\n=== Detailed Status ===")
+    print(f"Database: {'✅' if details['database_ok'] else '⚠️'}")
+    print(f"OpenAI API: {'✅' if details['openai_ok'] else '❌'}")
+    print(f"Available ports: {len(details['available_ports'])}/{len(REQUIRED_PORTS)}")
     
     if is_valid:
         print("\n✅ Environment validation passed!")
@@ -86,8 +207,12 @@ def print_environment_status():
 def main():
     """Main function"""
     if len(sys.argv) > 1 and sys.argv[1] == "--check-only":
-        is_valid, errors, warnings = check_environment()
+        is_valid, _, _ = check_environment()
         sys.exit(0 if is_valid else 1)
+    elif len(sys.argv) > 1 and sys.argv[1] == "--report":
+        report = generate_environment_report()
+        print(report)
+        sys.exit(0 if report["valid"] else 1)
     else:
         is_valid = print_environment_status()
         sys.exit(0 if is_valid else 1)
