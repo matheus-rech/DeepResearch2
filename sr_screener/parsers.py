@@ -425,7 +425,6 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
     return pd.DataFrame(citations)
 
 
-
 def detect_format(filename: str, content: bytes) -> str:
     """
     Detect citation file format from filename and content.

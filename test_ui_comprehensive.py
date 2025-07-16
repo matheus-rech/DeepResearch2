@@ -70,8 +70,8 @@ async def comprehensive_ui_test():
                     print(f"🖱️  Clicking tab: {tab_text}")
                     await tab.click()
                     await page.wait_for_timeout(2000)
-                    await page.screenshot(path=SCREENSHOT_DIR / f"03_tab_{i+1}_{tab_text.replace(' ', '_').lower()}.png", full_page=True)
-                    print(f"✅ Screenshot 3.{i+1}: Tab '{tab_text}' captured")
+                    await page.screenshot(path=SCREENSHOT_DIR / f"03_tab_{i + 1}_{tab_text.replace(' ', '_').lower()}.png", full_page=True)
+                    print(f"✅ Screenshot 3.{i + 1}: Tab '{tab_text}' captured")
             
             # Test file upload interface
             print("📸 Step 4: Test file upload interface")
@@ -111,8 +111,8 @@ async def comprehensive_ui_test():
                             try:
                                 await button.click()
                                 await page.wait_for_timeout(2000)
-                                await page.screenshot(path=SCREENSHOT_DIR / f"07_sidebar_action_{i+1}.png", full_page=True)
-                                print(f"✅ Screenshot 7.{i+1}: Sidebar action captured")
+                                await page.screenshot(path=SCREENSHOT_DIR / f"07_sidebar_action_{i + 1}.png", full_page=True)
+                                print(f"✅ Screenshot 7.{i + 1}: Sidebar action captured")
                             except Exception as e:
                                 print(f"⚠️  Could not click button: {e}")
             

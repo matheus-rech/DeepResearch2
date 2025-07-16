@@ -919,11 +919,11 @@ def show_results_step():
         st.metric("Total Screened", stats["total_screened"])
     with col2:
         st.metric("Included", stats["included"], 
-                  delta=f"{stats['inclusion_rate']*100:.1f}%",
+                  delta=f"{stats['inclusion_rate'] * 100:.1f}%",
                   delta_color="normal")
     with col3:
         st.metric("Excluded", stats["excluded"],
-                  delta=f"{(1-stats['inclusion_rate'])*100:.1f}%",
+                  delta=f"{(1 - stats['inclusion_rate']) * 100:.1f}%",
                   delta_color="inverse")
     with col4:
         confidence = stats["confidence_breakdown"]

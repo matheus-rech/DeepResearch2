@@ -6,7 +6,7 @@ Validates required environment variables and provides helpful error messages
 
 import os
 import sys
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 def check_environment() -> Tuple[bool, List[str], List[str]]:
     """
@@ -38,9 +38,7 @@ def check_environment() -> Tuple[bool, List[str], List[str]]:
     if not database_url:
         warnings.append("DATABASE_URL not set - using SQLite database")
     
-    mcp_host = os.environ.get("MCP_HOST", "0.0.0.0")
     mcp_port = os.environ.get("MCP_PORT", "8001")
-    streamlit_host = os.environ.get("STREAMLIT_HOST", "0.0.0.0")
     streamlit_port = os.environ.get("STREAMLIT_PORT", "8000")
     
     try:

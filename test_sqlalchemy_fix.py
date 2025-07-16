@@ -4,7 +4,6 @@ Test script to verify SQLAlchemy fixes in database.py
 """
 import warnings
 import sys
-import os
 
 warnings.filterwarnings('ignore')
 
@@ -14,13 +13,17 @@ def test_sqlalchemy_import():
     
     try:
         sys.path.append('sr_screener')
-        from database import generate_citation_embeddings, Citation
+        import database
         print("✅ database.py imports successfully")
         print("✅ No SQLAlchemy MovedIn20Warning about declarative_base")
         print("✅ No variable shadowing issues with text() function")
         
+        # Test that we can access the Citation model
+        _ = database.Citation
         print("✅ Citation model accessible")
         
+        # Test that we can access the function
+        _ = database.generate_citation_embeddings
         print("✅ generate_citation_embeddings function accessible")
         
         return True

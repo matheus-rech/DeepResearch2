@@ -17,7 +17,7 @@ def show_screening_results():
     print("📚 CITATIONS TO SCREEN:")
     print("-" * 60)
     for i, row in df.iterrows():
-        print(f"Citation {i+1}:")
+        print(f"Citation {i + 1}:")
         print(f"  Title: {row['title']}")
         print(f"  Year: {row['year']}")
         print(f"  Journal: {row['journal']}")

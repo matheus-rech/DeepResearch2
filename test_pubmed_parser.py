@@ -3,8 +3,6 @@
 Test script to validate PubMed text parser functionality
 """
 import sys
-import io
-import pandas as pd
 from pathlib import Path
 
 def test_pubmed_text_parser():
@@ -55,13 +53,13 @@ def test_pubmed_text_parser():
                 print(f"Abstract length: {len(str(row['abstract']))}")
                 
                 if not row['title'] or len(str(row['title']).strip()) < 10:
-                    print(f"⚠️  Warning: Title seems too short")
+                    print("⚠️  Warning: Title seems too short")
                 
                 if not row['abstract'] or len(str(row['abstract']).strip()) < 50:
-                    print(f"⚠️  Warning: Abstract seems too short")
+                    print("⚠️  Warning: Abstract seems too short")
                 
                 if not row['id'] or 'PMID:' not in str(row['id']):
-                    print(f"⚠️  Warning: PMID not properly extracted")
+                    print("⚠️  Warning: PMID not properly extracted")
         
         print("\n=== Testing Main Parser Function ===")
         with open(sample_file, 'rb') as f:
@@ -69,7 +67,7 @@ def test_pubmed_text_parser():
             print(f"✓ Main parser processed {len(df_main)} citations")
             
             if len(df_main) != len(df):
-                print(f"⚠️  Warning: Different citation counts between parsers")
+                print("⚠️  Warning: Different citation counts between parsers")
         
         return True
         
