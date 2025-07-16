@@ -26,7 +26,14 @@ logger = logging.getLogger(__name__)
 
 # OpenAI configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-VECTOR_STORE_ID = os.environ.get("VECTOR_STORE_ID", "vs_682552f3ab90819185d4b99adcae7a07") or "vs_682552f3ab90819185d4b99adcae7a07"
+VECTOR_STORE_ID = os.environ.get("VECTOR_STORE_ID")
+
+FALLBACK_VECTOR_STORE_ID = "vs_682552f3ab90819185d4b99adcae7a07"
+
+if not VECTOR_STORE_ID or VECTOR_STORE_ID == "your_vector_store_id_here":
+    VECTOR_STORE_ID = FALLBACK_VECTOR_STORE_ID
+    logger.warning(f"Using fallback VECTOR_STORE_ID: {VECTOR_STORE_ID}")
+    logger.warning("Set VECTOR_STORE_ID environment variable for production use")
 
 # Initialize OpenAI client
 openai_client = OpenAI()
@@ -117,6 +124,22 @@ def create_server():
         return {"results": results}
 
     @mcp.tool()
+    async def health_check() -> Dict[str, str]:
+        """
+        Health check endpoint to verify server is running.
+        
+        Returns:
+            Simple health status for vector store mode
+        """
+        import time
+        return {
+            "status": "healthy",
+            "server": "VectorStoreMCPServer",
+            "timestamp": str(time.time()),
+            "vector_store_id": VECTOR_STORE_ID or "fallback"
+        }
+
+    @mcp.tool()
     async def fetch(id: str) -> Dict[str, Any]:
         """
         Retrieve complete document content by ID for detailed 
@@ -199,10 +222,33 @@ def run_vector_store_mode():
 
     # Create the MCP server
     server = create_server()
+    
+    @server.custom_route("/health", methods=["GET"])
+    async def health_endpoint(request):
+        """HTTP health check endpoint for production monitoring"""
+        from starlette.responses import JSONResponse
+        import time
+        try:
+            tools = await server.get_tools()
+            return JSONResponse({
+                "status": "healthy",
+                "server": "VectorStoreMCPServer",
+                "timestamp": str(time.time()),
+                "tools_count": len(tools),
+                "vector_store_id": VECTOR_STORE_ID
+            })
+        except Exception as e:
+            return JSONResponse({
+                "status": "unhealthy",
+                "server": "VectorStoreMCPServer",
+                "timestamp": str(time.time()),
+                "error": str(e)
+            }, status_code=500)
 
     # Configure and start the server
     logger.info("Starting MCP server on 0.0.0.0:8001")
     logger.info("Server will be accessible via SSE transport")
+    logger.info("Health endpoint: http://0.0.0.0:8001/health")
 
     try:
         # Use FastMCP's built-in run method with SSE transport

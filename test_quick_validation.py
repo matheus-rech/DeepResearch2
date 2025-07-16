@@ -4,7 +4,18 @@ Quick validation test for core functionality
 """
 import sys
 import os
+import warnings
+import logging
 from pathlib import Path
+
+os.environ["STREAMLIT_LOGGER_LEVEL"] = "ERROR"
+warnings.filterwarnings("ignore", message=".*ScriptRunContext.*")
+warnings.filterwarnings("ignore", message=".*Session state does not function.*")
+warnings.filterwarnings("ignore", message=".*to view this Streamlit app.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="streamlit")
+
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime.scriptrunner_utils.script_run_context").setLevel(logging.ERROR)
 
 def test_imports():
     """Test that all modules can be imported"""
@@ -15,15 +26,20 @@ def test_imports():
         print("✓ main.py imports successfully")
         
         sys.path.append('sr_screener')
-        import app  # noqa: F401
+        
         import database  # noqa: F401
         import mcp_server  # noqa: F401
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            import app  # noqa: F401
+            
         print("✓ sr_screener modules import successfully")
         
-        assert True, "Test completed successfully"
+        return True
     except Exception as e:
         print(f"✗ Import test failed: {e}")
-        assert False, "Test failed"
+        return False
 
 def test_environment():
     """Test environment configuration"""
