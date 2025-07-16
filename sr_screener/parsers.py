@@ -3,12 +3,10 @@ Citation file parsers for various formats
 Supports: PubMed XML, RIS, CSV, ArXiv, and more
 """
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Optional
 import pandas as pd
 import rispy
 import io
-import csv
-import json
 from dateutil import parser as date_parser
 from bs4 import BeautifulSoup
 import logging
@@ -238,8 +236,8 @@ def parse_csv(file_obj) -> pd.DataFrame:
     list_fields = ['authors', 'mesh_terms', 'keywords']
     for field in list_fields:
         if field in df.columns:
-            df[field] = df[field].apply(lambda x: 
-                x.split(';') if isinstance(x, str) else []
+            df[field] = df[field].apply(
+                lambda x: x.split(';') if isinstance(x, str) else []
             )
         else:
             df[field] = [[] for _ in range(len(df))]
@@ -356,7 +354,7 @@ def detect_format(filename: str, content: bytes) -> str:
             return 'pubmed_xml'
         elif content_str.strip().startswith('PMID-'):
             return 'pubmed_nbib'
-    except:
+    except Exception:
         pass
     
     return 'unknown'

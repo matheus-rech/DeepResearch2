@@ -4,8 +4,6 @@ Streamlit-integrated MCP proxy for external access
 import streamlit as st
 import requests
 import json
-import os
-from pathlib import Path
 
 def create_mcp_proxy_route():
     """Create MCP proxy route that forwards requests to local MCP server"""

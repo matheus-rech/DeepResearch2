@@ -10,12 +10,10 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 
 import pandas as pd
-import numpy as np
-from sqlalchemy import create_engine, text, Column, String, Text, Integer, DateTime, JSON, Float
+from sqlalchemy import create_engine, text, Column, String, Text, Integer, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +23,12 @@ Base = declarative_base()
 
 # OpenAI client for embeddings
 openai_client = None
-if os.environ.get("OPENAI_API_KEY"):
-    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+try:
+    from openai import OpenAI
+    if os.environ.get("OPENAI_API_KEY"):
+        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+except ImportError:
+    pass
 
 
 def clean_nan_values(obj):
@@ -77,9 +79,9 @@ if DATABASE_URL:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 else:
     # Fallback for testing
-    engine = create_engine('sqlite:///citations.db', 
-                         connect_args={'check_same_thread': False},
-                         poolclass=StaticPool)
+    engine = create_engine('sqlite:///citations.db',
+                           connect_args={'check_same_thread': False},
+                           poolclass=StaticPool)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -146,17 +148,17 @@ def init_db():
         if 'postgresql' in str(engine.url):
             with engine.connect() as conn:
                 conn.execute(text("""
-                    -- Create GIN index for full-text search
-                    CREATE INDEX IF NOT EXISTS idx_citations_search 
-                    ON citations USING gin(to_tsvector('english', 
-                        coalesce(title, '') || ' ' || 
-                        coalesce(abstract, '') || ' ' || 
-                        coalesce(authors, '') || ' ' ||
-                        coalesce(keywords, '')
-                    ));
-                    
-                    -- Create index for vector similarity search (if embeddings exist)
-                    -- This will be created after embeddings are generated
+                -- Create GIN index for full-text search
+                CREATE INDEX IF NOT EXISTS idx_citations_search 
+                ON citations USING gin(to_tsvector('english', 
+                    coalesce(title, '') || ' ' || 
+                    coalesce(abstract, '') || ' ' || 
+                    coalesce(authors, '') || ' ' ||
+                    coalesce(keywords, '')
+                ));
+                
+                -- Create index for vector similarity search (if embeddings exist)
+                -- This will be created after embeddings are generated
                 """))
                 conn.commit()
 
@@ -203,7 +205,7 @@ def bulk_insert_citations(df: pd.DataFrame):
                 citation_data = {
                     'title': str(row.get('title', '')),
                     'abstract': str(row.get('abstract', '')),
-                    'year': int(float(str(row.get('year')))) if pd.notna(row.get('year')) and str(row.get('year')).replace('.','').replace('-','').isdigit() else None,
+                    'year': int(float(str(row.get('year')))) if pd.notna(row.get('year')) and str(row.get('year')).replace('.', '').replace('-', '').isdigit() else None,
                     'authors': json.dumps(row.get('authors', [])) if isinstance(row.get('authors'), list) else str(row.get('authors', '')),
                     'journal': str(row.get('journal', '')),
                     'doi': str(row.get('doi', '') if pd.notna(row.get('doi', '')) else ''),
@@ -437,7 +439,7 @@ def generate_citation_embeddings():
     
     with get_db() as db:
         # Get citations without embeddings
-        citations = db.query(Citation).filter(Citation.embedding == None).all()
+        citations = db.query(Citation).filter(Citation.embedding.is_(None)).all()
         
         for citation in citations:
             try:

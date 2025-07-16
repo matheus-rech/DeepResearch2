@@ -26,7 +26,7 @@ def export_summary_text(citations: List[Dict[str, Any]]) -> str:
         if isinstance(authors, str):
             try:
                 authors = json.loads(authors)
-            except:
+            except Exception:
                 authors = [authors] if authors else []
         
         if authors:
@@ -165,7 +165,7 @@ def export_pubmed_format(citations: List[Dict[str, Any]]) -> str:
         if isinstance(authors, str):
             try:
                 authors = json.loads(authors)
-            except:
+            except Exception:
                 authors = [authors] if authors else []
         
         for author in authors:
@@ -195,7 +195,7 @@ def export_pubmed_format(citations: List[Dict[str, Any]]) -> str:
         if isinstance(mesh_terms, str):
             try:
                 mesh_terms = json.loads(mesh_terms)
-            except:
+            except Exception:
                 mesh_terms = []
         
         for term in mesh_terms:
@@ -239,7 +239,7 @@ def export_abstract_text(citations: List[Dict[str, Any]]) -> str:
         if isinstance(authors, str):
             try:
                 authors = json.loads(authors)
-            except:
+            except Exception:
                 authors = [authors] if authors else []
         
         if authors:
@@ -309,7 +309,7 @@ def export_csv(citations: List[Dict[str, Any]]) -> str:
         if isinstance(authors, str):
             try:
                 authors = json.loads(authors)
-            except:
+            except Exception:
                 authors = [authors] if authors else []
         
         # Format authors
@@ -326,14 +326,14 @@ def export_csv(citations: List[Dict[str, Any]]) -> str:
         if isinstance(mesh_terms, str):
             try:
                 mesh_terms = json.loads(mesh_terms)
-            except:
+            except Exception:
                 mesh_terms = []
         
         keywords = citation.get('keywords', [])
         if isinstance(keywords, str):
             try:
                 keywords = json.loads(keywords)
-            except:
+            except Exception:
                 keywords = []
         
         row = {

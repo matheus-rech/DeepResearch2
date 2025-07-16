@@ -4,11 +4,9 @@ Uses OpenAI's o3-deep-research model for automated screening
 """
 import os
 import json
-import time
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from openai import OpenAI
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +91,6 @@ Return your results as a JSON array where each citation has this structure:
 
 Focus on extracting EXACT quotes that support each PICOTT element and criterion match."""
 
-    # System message for research context
-    system_message = """You are a professional systematic reviewer with expertise in evidence synthesis.
-Your screening decisions should be based solely on the information available in titles and abstracts.
-Be consistent in applying the screening criteria across all citations.
-Document your reasoning clearly for transparency and potential appeals."""
 
     # Configure MCP server URL - needs to be accessible from OpenAI's servers
     # In production, this should be your deployed server URL
@@ -306,7 +299,7 @@ def run_systematic_screening(
 
         # Extract results
         if callback:
-            callback(f"Processing screening results...")
+            callback("Processing screening results...")
         results_data = poll_job_status(response)
 
         # Parse results

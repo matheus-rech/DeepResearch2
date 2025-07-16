@@ -4,7 +4,6 @@ Implements a pipeline of specialized agents for optimal screening performance
 """
 import os
 import json
-import asyncio
 import logging
 from typing import Dict, List, Any, Optional
 from openai import OpenAI

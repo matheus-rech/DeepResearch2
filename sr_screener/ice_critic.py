@@ -106,7 +106,7 @@ def analyze_screening_consistency(
             "type": "very_low_inclusion_rate",
             "citation_id": "Overall",
             "severity": "medium",
-            "description": f"Inclusion rate is very low ({inclusion_rate*100:.1f}%)",
+            "description": "Inclusion rate is very low ({:.1f}%)".format(inclusion_rate * 100),
             "suggestion": "Verify screening criteria are not too restrictive"
         })
     elif inclusion_rate > 0.5:
@@ -114,7 +114,7 @@ def analyze_screening_consistency(
             "type": "high_inclusion_rate",
             "citation_id": "Overall",
             "severity": "medium",
-            "description": f"Inclusion rate is high ({inclusion_rate*100:.1f}%)",
+            "description": "Inclusion rate is high ({:.1f}%)".format(inclusion_rate * 100),
             "suggestion": "Verify screening criteria are sufficiently specific"
         })
     
@@ -153,7 +153,7 @@ def find_similar_reasons(reasons: List[str]) -> List[List[str]]:
         group = [reason1]
         used.add(reason1)
         
-        for j, reason2 in enumerate(reasons[i+1:], i+1):
+        for j, reason2 in enumerate(reasons[i + 1:], i + 1):
             if reason2 in used:
                 continue
                 
@@ -204,9 +204,9 @@ def analyze_missing_data_patterns(screening_results: List[Dict[str, Any]]) -> Li
     if missing_title:
         patterns.append({
             "type": "missing_title_data",
-            "citation_id": f"{len(missing_title)} citations",
+            "citation_id": "{} citations".format(len(missing_title)),
             "severity": "high",
-            "description": f"{len(missing_title)} citations have missing or very short titles",
+            "description": "{} citations have missing or very short titles".format(len(missing_title)),
             "suggestion": "Verify data import was successful for these citations"
         })
     
@@ -238,9 +238,9 @@ def check_sequence_patterns(screening_results: List[Dict[str, Any]]) -> List[Dic
             if sequence_length > max_sequence:
                 issues.append({
                     "type": "suspicious_sequence_pattern",
-                    "citation_id": f"Citations {sequence_start} to {i-1}",
+                    "citation_id": "Citations {} to {}".format(sequence_start, i - 1),
                     "severity": "medium",
-                    "description": f"{sequence_length} consecutive {'inclusions' if current_decision else 'exclusions'}",
+                    "description": "{} consecutive {}".format(sequence_length, 'inclusions' if current_decision else 'exclusions'),
                     "suggestion": "Review for potential automation bias or fatigue"
                 })
             
@@ -257,12 +257,10 @@ def check_title_similarity(screening_results: List[Dict[str, Any]]) -> List[Dict
     """
     issues = []
     
-    # Group by inclusion decision
-    included = [r for r in screening_results if r.get("include")]
     
     # Check for very similar titles with different decisions
     for i, result1 in enumerate(screening_results):
-        for j, result2 in enumerate(screening_results[i+1:], i+1):
+        for j, result2 in enumerate(screening_results[i + 1:], i + 1):
             if result1.get("title") and result2.get("title"):
                 similarity = calculate_title_similarity(result1["title"], result2["title"])
                 
@@ -270,7 +268,7 @@ def check_title_similarity(screening_results: List[Dict[str, Any]]) -> List[Dict
                     if result1.get("include") != result2.get("include"):
                         issues.append({
                             "type": "similar_titles_different_decisions",
-                            "citation_id": f"{result1['id']} vs {result2['id']}",
+                            "citation_id": "{} vs {}".format(result1['id'], result2['id']),
                             "severity": "high",
                             "description": "Very similar titles with different screening decisions",
                             "suggestion": "Check if these are duplicate citations or require consistent decisions"
@@ -278,7 +276,7 @@ def check_title_similarity(screening_results: List[Dict[str, Any]]) -> List[Dict
                     elif similarity > 0.95:  # Likely duplicates
                         issues.append({
                             "type": "potential_duplicate",
-                            "citation_id": f"{result1['id']} and {result2['id']}",
+                            "citation_id": "{} and {}".format(result1['id'], result2['id']),
                             "severity": "medium",
                             "description": "Potential duplicate citations detected",
                             "suggestion": "Verify if these are true duplicates and handle accordingly"

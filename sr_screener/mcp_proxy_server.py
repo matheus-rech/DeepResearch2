@@ -10,7 +10,6 @@ import sys
 import os
 import logging
 from pathlib import Path
-import time
 import threading
 
 logging.basicConfig(level=logging.INFO)

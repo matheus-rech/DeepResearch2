@@ -4,7 +4,6 @@ Main entry point for Systematic Review Screener
 Can run either the MCP server or Streamlit UI
 """
 import sys
-import os
 import subprocess
 from pathlib import Path
 

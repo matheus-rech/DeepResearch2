@@ -4,9 +4,9 @@ MCP Server for Systematic Review Screening
 Implements search and fetch tools for Deep Research integration
 """
 import os
-import time
 import logging
-from typing import Dict, List, Any, Optional
+import time
+from typing import Dict, Any, Optional
 
 from fastmcp import FastMCP
 import database as db

@@ -16,8 +16,6 @@ from deep_research import run_systematic_screening
 import ice_critic
 from data_validator import CitationValidator
 from pubmed_export import export_citations
-from multi_agent_research import run_multi_agent_screening
-from sqlalchemy import func
 
 # Load environment variables
 load_dotenv()
@@ -135,7 +133,6 @@ def main():
         show_screening_step()
     elif st.session_state.current_step == "results":
         show_results_step()
-
 
 
 def show_upload_step():
@@ -290,7 +287,7 @@ def show_upload_step():
                             else:
                                 df = parsers.parse_pubmed_search(search_query, max_results)
                             
-                            st.success(f"Found {len(df)} papers from {search_source}!")
+                            st.success("Found {} papers from {}!".format(len(df), search_source))
                             
                             # Validate citations
                             validator = CitationValidator()
@@ -312,7 +309,7 @@ def show_upload_step():
                             
                             # Show results
                             if stats['inserted'] > 0:
-                                st.success(f"✅ Added {stats['inserted']} new papers!")
+                                st.success("✅ Added {} new papers!".format(stats['inserted']))
                             if stats['updated'] > 0:
                                 st.info(f"📝 Updated {stats['updated']} existing papers")
                             if stats['skipped'] > 0:
@@ -417,15 +414,15 @@ def show_upload_step():
 
                 if search_query:
                     mask = (
-                        filtered_df['title'].str.contains(search_query, case=False, na=False) |
-                        filtered_df['abstract'].str.contains(search_query, case=False, na=False)
+                        filtered_df['title'].str.contains(search_query, case=False, na=False)
+                        | filtered_df['abstract'].str.contains(search_query, case=False, na=False)
                     )
                     filtered_df = filtered_df[mask]
 
                 if year_range and df['year'].notna().any():
                     filtered_df = filtered_df[
-                        (filtered_df['year'] >= year_range[0]) & 
-                        (filtered_df['year'] <= year_range[1])
+                        (filtered_df['year'] >= year_range[0])
+                        & (filtered_df['year'] <= year_range[1])
                     ]
 
                 st.write(f"Showing {len(filtered_df)} of {len(df)} citations")
@@ -492,11 +489,15 @@ def show_criteria_step():
     stats = db.get_corpus_stats()
     with db.get_db() as database:
         # Count citations with abstracts
-        citations_with_abstract = database.query(db.Citation).filter(
+        citations_with_good_abstract = 0
+        for citation in database.query(db.Citation).filter(
             db.Citation.abstract.isnot(None),
-            db.Citation.abstract != '',
-            func.length(db.Citation.abstract) > 50
-        ).count()
+            db.Citation.abstract != ''
+        ).all():
+            if len(citation.abstract) > 50:
+                citations_with_good_abstract += 1
+        
+        citations_with_abstract = citations_with_good_abstract
         
         abstract_coverage = (citations_with_abstract / stats["total_citations"] * 100) if stats["total_citations"] > 0 else 0
         
@@ -763,7 +764,7 @@ def show_screening_step():
                 if stats['total_citations'] > 0:
                     with db.get_db() as database:
                         embedded_count = database.query(db.Citation).filter(
-                            db.Citation.embedding != None
+                            db.Citation.embedding.isnot(None)
                         ).count()
                     
                     if embedded_count == 0:
@@ -830,7 +831,7 @@ def show_screening_step():
                 
                 # Show screening mode
                 mode = "multi-agent" if use_multi_agent else "single-agent"
-                progress_placeholder.info(f"Starting {mode} screening process...")
+                progress_placeholder.info("Starting {} screening process...".format(mode))
                 
                 # Run screening directly (no threading)
                 with st.spinner("Screening in progress... This may take several minutes."):
@@ -854,7 +855,7 @@ def show_screening_step():
                 st.session_state.screening_timestamp = datetime.now()
                 
                 # Show success message
-                progress_placeholder.success(f"✅ Screening completed! Found {results['statistics']['included']} relevant citations.")
+                progress_placeholder.success("✅ Screening completed! Found {} relevant citations.".format(results['statistics']['included']))
                 time.sleep(2)  # Brief pause to show success message
                 
                 # Navigate to results
@@ -868,7 +869,7 @@ def show_screening_step():
                 elif "connection" in error_msg.lower():
                     progress_placeholder.error("❌ Connection Error: Please check MCP server is running on port 8001")
                 else:
-                    progress_placeholder.error(f"❌ Screening failed: {error_msg}")
+                    progress_placeholder.error("❌ Screening failed: {}".format(error_msg))
                 
                 with st.expander("Error Details"):
                     st.exception(e)
@@ -932,8 +933,8 @@ def show_results_step():
             st.bar_chart(conf_data.set_index('Confidence'))
     
     # Results tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Included Citations", "Excluded Citations", 
-                                       "ICE Analysis", "Export Results"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Included Citations", "Excluded Citations",
+                                      "ICE Analysis", "Export Results"])
 
     with tab1:
         st.subheader(f"Included Citations ({stats['included']})")
@@ -984,7 +985,7 @@ def show_results_step():
                         st.markdown(f"**Confidence:** {citation['confidence']}")
 
                         # View full citation button
-                        if st.button(f"View Full", key=f"view_{citation['id']}"):
+                        if st.button("View Full", key=f"view_{citation['id']}"):
                             full_citation = db.fetch_citation(citation['id'])
                             if full_citation:
                                 st.json(full_citation)
@@ -1014,7 +1015,7 @@ def show_results_step():
                                 st.markdown(f"- {criterion}")
 
                         # Show PICOTT elements for context
-                        if citation.get("picott") and st.checkbox(f"Show PICOTT elements", key=f"picott_{citation['id']}"):
+                        if citation.get("picott") and st.checkbox("Show PICOTT elements", key=f"picott_{citation['id']}"):
                             for element, quote in citation["picott"].items():
                                 if quote and quote != "Not found":
                                     element_name = element.replace("studyType", "Study Type").capitalize()
@@ -1201,11 +1202,11 @@ def show_results_step():
         
         # Additional export info
         st.divider()
-        st.info(f"""
+        st.info("""
         **Export Summary:**
-        - Format: {export_format}
-        - Citations: {len(citations_to_export)} {export_set.lower()}
-        - Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        - Format: {}
+        - Citations: {} {}
+        - Generated: {}
         
         **PubMed Format Notes:**
         - Summary (text): NLM citation style, suitable for bibliographies
@@ -1214,7 +1215,7 @@ def show_results_step():
         - Abstract (text): Full abstracts with citation details
         - CSV: Spreadsheet-compatible format with all fields
         - .nbib: Compatible with EndNote, Mendeley, Zotero, etc.
-        """)
+        """.format(export_format, len(citations_to_export), export_set.lower(), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
     # Navigation
     st.divider()
@@ -1230,15 +1231,12 @@ def show_results_step():
     with col2:
         if st.button("🏠 Start Over"):
             # Reset everything
-            for key in ["citations_loaded", "screening_results", "pico_criteria", 
-                       "inclusion_criteria", "exclusion_criteria"]:
+            for key in ["citations_loaded", "screening_results", "pico_criteria",
+                        "inclusion_criteria", "exclusion_criteria"]:
                 if key in st.session_state:
                     del st.session_state[key]
             st.session_state.current_step = "upload"
             st.rerun()
-
-
-
 
 
 if __name__ == "__main__":
