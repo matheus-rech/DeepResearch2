@@ -5,9 +5,11 @@ Final production test to verify MCP server is working correctly
 import sys
 import asyncio
 import traceback
+import pytest
 
 sys.path.append('sr_screener')
 
+@pytest.mark.asyncio
 async def test_production_ready():
     """Test that MCP server is production ready"""
     print("=== Final Production Test ===")

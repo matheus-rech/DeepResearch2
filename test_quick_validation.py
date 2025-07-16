@@ -20,10 +20,10 @@ def test_imports():
         import mcp_server  # noqa: F401
         print("✓ sr_screener modules import successfully")
         
-        return True
+        assert True, "Test completed successfully"
     except Exception as e:
         print(f"✗ Import test failed: {e}")
-        return False
+        assert False, "Test failed"
 
 def test_environment():
     """Test environment configuration"""

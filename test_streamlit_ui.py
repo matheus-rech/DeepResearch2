@@ -23,13 +23,13 @@ def test_streamlit_ui():
         if response.status_code == 200:
             print("✓ Streamlit UI accessible")
             print(f"  Response length: {len(response.text)} characters")
-            return True
+            assert True, "Test completed successfully"
         else:
             print(f"✗ UI not accessible: {response.status_code}")
-            return False
+            assert False, "Test failed"
     except Exception as e:
         print(f"✗ Failed to connect to UI: {e}")
-        return False
+        assert False, "Test failed"
     finally:
         proc.terminate()
         proc.wait(timeout=5)

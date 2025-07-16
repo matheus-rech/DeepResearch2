@@ -33,15 +33,15 @@ def test_mcp_server():
         
         if response.status_code == 200:
             print("✅ MCP server is accessible!")
-            return True
+            assert True, "Test completed successfully"
         else:
             print(f"❌ MCP server returned status {response.status_code}")
             print(f"Response: {response.text[:200]}")
-            return False
+            assert False, "Test failed"
             
     except requests.exceptions.RequestException as e:
         print(f"❌ Connection failed: {e}")
-        return False
+        assert False, "Test failed"
 
 if __name__ == "__main__":
     test_mcp_server()

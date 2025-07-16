@@ -5,9 +5,11 @@ Async test script for FastMCP tool registration
 import sys
 import asyncio
 import traceback
+import pytest
 
 sys.path.append('sr_screener')
 
+@pytest.mark.asyncio
 async def test_mcp_server_async():
     """Test MCP server tool registration with proper async handling"""
     print("=== Testing MCP Server Tools (Async) ===")
@@ -38,6 +40,7 @@ async def test_mcp_server_async():
         traceback.print_exc()
         return False
 
+@pytest.mark.asyncio
 async def test_tool_functionality():
     """Test actual tool functionality"""
     print("\n=== Testing Tool Functionality ===")

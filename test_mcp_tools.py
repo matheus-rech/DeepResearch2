@@ -4,8 +4,10 @@ Test MCP tools functionality directly
 """
 import sys
 import asyncio
+import pytest
 sys.path.append('sr_screener')
 
+@pytest.mark.asyncio
 async def test_mcp_tools():
     """Test MCP tools directly"""
     print("=== Testing MCP Tools ===")

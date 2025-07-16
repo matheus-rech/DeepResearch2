@@ -3,8 +3,10 @@ Test script for multi-agent systematic review screening
 Demonstrates the multi-agent pipeline without requiring full UI
 """
 import asyncio
+import pytest
 from sr_screener.multi_agent_research import MultiAgentScreener
 
+@pytest.mark.asyncio
 async def test_multi_agent():
     """Test the multi-agent screening pipeline"""
     
