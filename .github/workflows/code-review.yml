@@ -1,0 +1,35 @@
+name: Code Review
+
+on:
+  pull_request:
+    branches: [ main, ai-artifact, develop, unified-main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  claude-code-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Claude Code Review
+        uses: anthropics/claude-code-review@v1
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          max-files: 20
+          exclude-patterns: |
+            **/*.md
+            **/*.txt
+            **/*.json
+            **/*.csv
+            **/*.yml
+            **/*.yaml
+            **/*.lock
+            **/*.env*
+            **/*.gitignore
+            **/*.dockerignore

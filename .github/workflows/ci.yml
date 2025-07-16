@@ -68,8 +68,20 @@ jobs:
     
     - name: Test Docker container
       run: |
+        # Create .env file for testing
+        cp .env.docker .env.test
+        sed -i 's/your_openai_api_key_here/test_key/g' .env.test
+        
+        # Run container with proper environment
         docker run -d --name test-container -p 8000:8000 -p 8001:8001 \
           -e OPENAI_API_KEY=test_key \
+          -e DOCKER_CONTAINER=true \
+          -e MCP_HOST=0.0.0.0 \
+          -e MCP_PORT=8001 \
+          -e STREAMLIT_HOST=0.0.0.0 \
+          -e STREAMLIT_PORT=8000 \
+          -e EXTERNAL_HOST=localhost \
+          -e EXTERNAL_PORT=8001 \
           deepresearch2:latest
         
         # Wait for container to be ready using our health check
@@ -88,12 +100,27 @@ jobs:
           sleep 5
         done
         
-        echo "Container is ready!"
+        # Test MCP server endpoints
+        echo "Testing MCP server endpoints..."
+        docker exec test-container curl -s http://localhost:8001/health | grep "healthy" || exit 1
+        docker exec test-container curl -s http://localhost:8001/sse/ || exit 1
+        
+        echo "Container is ready and endpoints are accessible!"
         docker logs test-container
         docker stop test-container
         docker rm test-container
+        
+    - name: Build and push Docker image for production
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/unified-main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: deepresearch2:production
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-  deploy:
+  fly-deploy:
     needs: [test, docker]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/unified-main')
@@ -101,7 +128,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy to production
+    - name: Set up Fly.io CLI
+      uses: superfly/flyctl-actions/setup-flyctl@master
+    
+    - name: Deploy to Fly.io
+      env:
+        FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        VECTOR_STORE_ID: ${{ secrets.VECTOR_STORE_ID }}
       run: |
-        echo "Production deployment would happen here"
-        echo "Consider using services like Railway, Render, or cloud providers"
+        if [ -z "$FLY_API_TOKEN" ]; then
+          echo "FLY_API_TOKEN is not set. Skipping deployment."
+          echo "To deploy to Fly.io, add FLY_API_TOKEN to your repository secrets."
+          exit 0
+        fi
+        
+        # Deploy the application
+        flyctl deploy --remote-only
+        
+        # Get the deployed app URL
+        APP_NAME=$(flyctl info --json | jq -r '.Name')
+        echo "Deployed to https://$APP_NAME.fly.dev"
+        
+        # Verify deployment
+        flyctl status
