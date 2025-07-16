@@ -9,10 +9,11 @@ import time
 from typing import Dict, Any, Optional
 
 from fastmcp import FastMCP
+from starlette.middleware.cors import CORSMiddleware
 import database as db
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 # Server configuration
@@ -33,8 +34,11 @@ def create_server():
     # Initialize database
     db.init_db()
     
-    # Create FastMCP server
-    mcp = FastMCP("DeepResearchServer", instructions=server_instructions)
+    # Create FastMCP server with descriptive name for OpenAI Deep Research API
+    mcp = FastMCP(
+        name="DeepResearch Systematic Review MCP Server",
+        instructions=server_instructions
+    )
     
     @mcp.tool()
     async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, Any]:
@@ -221,6 +225,15 @@ def main(port=8001):
     """Main function to start the MCP server."""
     server = create_server()
     
+    server.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins in development
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"]
+    )
+    
     @server.custom_route("/health", methods=["GET"])
     async def health_endpoint(request):
         """HTTP health check endpoint for production monitoring"""
@@ -229,26 +242,53 @@ def main(port=8001):
             tools = await server.get_tools()
             return JSONResponse({
                 "status": "healthy",
-                "server": "DeepResearchServer",
+                "server": "DeepResearch Systematic Review MCP Server",
                 "timestamp": str(time.time()),
-                "tools_count": len(tools)
+                "tools_count": len(tools),
+                "version": "1.0.0"
             })
         except Exception as e:
             return JSONResponse({
                 "status": "unhealthy",
-                "server": "DeepResearchServer",
+                "server": "DeepResearch Systematic Review MCP Server",
                 "timestamp": str(time.time()),
                 "error": str(e)
             }, status_code=500)
     
+    host = os.getenv("MCP_HOST", "0.0.0.0")
+    port = int(os.getenv("MCP_PORT", port))
+    
     # Log server info
-    logger.info(f"Starting Systematic Review MCP server on 0.0.0.0:{port}")
+    logger.info(f"Starting Systematic Review MCP server on {host}:{port}")
     logger.info("Server will be accessible via SSE transport")
-    logger.info(f"Health endpoint: http://0.0.0.0:{port}/health")
-    logger.info(f"External URL: https://{os.getenv('REPL_SLUG', 'unknown')}-{port}.{os.getenv('REPL_OWNER', 'unknown')}.repl.co/sse/")
+    logger.info(f"Health endpoint: http://{host}:{port}/health")
+    
+    if os.getenv("EXTERNAL_HOST"):
+        protocol = os.getenv("EXTERNAL_PROTOCOL", "https")
+        ext_host = os.getenv("EXTERNAL_HOST")
+        ext_port = os.getenv("EXTERNAL_PORT", "443")
+        
+        if (protocol == "https" and ext_port == "443") or (protocol == "http" and ext_port == "80"):
+            ext_url = f"{protocol}://{ext_host}/sse/"
+        else:
+            ext_url = f"{protocol}://{ext_host}:{ext_port}/sse/"
+            
+        logger.info(f"External URL: {ext_url}")
+    elif os.getenv("FLY_APP_NAME"):
+        app_name = os.getenv("FLY_APP_NAME")
+        logger.info(f"External URL: https://{app_name}.fly.dev/sse/")
+    elif os.getenv("HEROKU_APP_NAME"):
+        app_name = os.getenv("HEROKU_APP_NAME")
+        logger.info(f"External URL: https://{app_name}.herokuapp.com/sse/")
+    elif os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
+        repl_slug = os.getenv("REPL_SLUG")
+        repl_owner = os.getenv("REPL_OWNER")
+        logger.info(f"External URL: https://{repl_slug}-{port}.{repl_owner}.repl.co/sse/")
+    else:
+        logger.info(f"Local URL: http://localhost:{port}/sse/")
     
     # Start server with SSE transport
-    server.run(transport="sse", host="0.0.0.0", port=port)
+    server.run(transport="sse", host=host, port=port)
 
 
 if __name__ == "__main__":
