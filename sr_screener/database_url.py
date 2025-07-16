@@ -18,8 +18,9 @@ def get_database_url():
     database_url = os.getenv("DATABASE_URL")
     
     if database_url:
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        parsed_url = urlparse(database_url)
+        if parsed_url.scheme == "postgres":
+            database_url = parsed_url._replace(scheme="postgresql").geturl()
         
         logger.info(f"Using production database: {urlparse(database_url).scheme}")
         return database_url
