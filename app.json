@@ -20,7 +20,8 @@
   },
   "addons": [
     {
-      "plan": "heroku-postgresql:hobby-dev"
+      "plan": "heroku-postgresql:hobby-dev",
+      "notes": "The hobby-dev plan has a limit of 10,000 rows and 20 concurrent connections. For production use, consider upgrading to a higher-tier plan such as 'standard-0' or 'premium-0' to handle larger datasets and more connections."
     }
   ],
   "buildpacks": [
