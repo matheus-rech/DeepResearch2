@@ -5,7 +5,6 @@ Complete workflow test - from file upload to running search/screening
 import asyncio
 import subprocess
 import sys
-import time
 import os
 from pathlib import Path
 from playwright.async_api import async_playwright

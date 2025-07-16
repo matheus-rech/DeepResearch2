@@ -5,7 +5,6 @@ Complete file upload workflow test using sample_citations.csv
 import asyncio
 import subprocess
 import sys
-import time
 import os
 from pathlib import Path
 from playwright.async_api import async_playwright

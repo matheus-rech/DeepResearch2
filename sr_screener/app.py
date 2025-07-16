@@ -415,16 +415,17 @@ def show_upload_step():
                             st.write(f"📅 Publication Years: {min_year}-{max_year}")
                         else:
                             try:
-                                year_range = st.slider("Publication Year Range", 
-                                                     min_value=min_year, 
-                                                     max_value=max_year, 
-                                                     value=(min_year, max_year),
-                                                     key="year_range_slider")
-                            except Exception as e:
+                                year_range = st.slider(
+                                    "Publication Year Range",
+                                    min_value=min_year,
+                                    max_value=max_year,
+                                    value=(min_year, max_year),
+                                    key="year_range_slider")
+                            except Exception:
                                 # Fallback if slider fails
                                 year_range = (min_year, max_year)
                                 st.write(f"📅 Publication Years: {min_year}-{max_year}")
-                                st.caption(f"Year filter disabled due to data range")
+                                st.caption("Year filter disabled due to data range")
                     else:
                         year_range = None
 
