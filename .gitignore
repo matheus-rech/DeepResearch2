@@ -107,3 +107,24 @@ test_results/
 # Documentation builds
 docs/_build/
 site/
+
+# Virtual environments (project specific)
+deepresearch_env/
+.venv/
+venv/
+
+# Development assets and temporary files
+attached_assets/
+screenshots/
+e2e_screenshots/
+
+# Large test outputs and logs
+*.png
+*.jpg
+*.jpeg
+*.html
+test_log.txt
+
+# Sample and temporary data
+sample_*.csv
+sample_*.json
