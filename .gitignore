@@ -128,3 +128,4 @@ test_log.txt
 # Sample and temporary data
 sample_*.csv
 sample_*.json
+test_env/
