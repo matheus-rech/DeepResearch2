@@ -5,10 +5,69 @@ Uses OpenAI's o3-deep-research model for automated screening
 import os
 import json
 import logging
-from typing import Dict, List, Any
+import urllib.parse
+from typing import Dict, List, Any, Optional
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+
+def get_mcp_url() -> str:
+    """
+    Get the appropriate MCP server URL based on environment.
+    
+    Returns:
+        str: The MCP server URL with /sse/ endpoint
+    """
+    # Priority order: explicit env var, platform-specific logic, localhost fallback
+    if os.getenv("MCP_SERVER_URL"):
+        url = os.getenv("MCP_SERVER_URL")
+        if not url.endswith("/sse/"):
+            url = url.rstrip("/") + "/sse/"
+        return url
+        
+    if os.getenv("EXTERNAL_HOST"):
+        host = os.getenv("EXTERNAL_HOST")
+        port = os.getenv("EXTERNAL_PORT", "443")
+        protocol = os.getenv("EXTERNAL_PROTOCOL", "https")
+        
+        if (protocol == "https" and port == "443") or (protocol == "http" and port == "80"):
+            url = f"{protocol}://{host}/sse/"
+        else:
+            url = f"{protocol}://{host}:{port}/sse/"
+        
+        return url
+    
+    if os.getenv("HEROKU_APP_NAME"):
+        # Running on Heroku
+        app_name = os.getenv("HEROKU_APP_NAME")
+        return f"https://{app_name}.herokuapp.com/sse/"
+    
+    if os.getenv("FLY_APP_NAME"):
+        # Running on Fly.io
+        app_name = os.getenv("FLY_APP_NAME")
+        return f"https://{app_name}.fly.dev/sse/"
+        
+    if os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
+        # Running on Replit
+        repl_slug = os.getenv("REPL_SLUG")
+        repl_owner = os.getenv("REPL_OWNER")
+        return f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"
+    
+    # Docker container configuration
+    if os.getenv("DOCKER_CONTAINER"):
+        # Running in Docker with external access
+        if os.getenv("EXTERNAL_HOST"):
+            host = os.getenv("EXTERNAL_HOST")
+            port = os.getenv("EXTERNAL_PORT", "8001")
+            protocol = os.getenv("EXTERNAL_PROTOCOL", "http")
+            return f"{protocol}://{host}:{port}/sse/"
+        return "http://localhost:8001/sse/"
+    
+    # Local development fallback
+    mcp_host = os.getenv("MCP_HOST", "localhost")
+    mcp_port = os.getenv("MCP_PORT", "8001")
+    return f"http://{mcp_host}:{mcp_port}/sse/"
 
 # OpenAI configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -23,7 +82,7 @@ def launch_screening_job(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
+    mcp_url: Optional[str] = None,
     search_mode: str = "fulltext"
 ) -> str:
     """
@@ -91,20 +150,8 @@ Return your results as a JSON array where each citation has this structure:
 
 Focus on extracting EXACT quotes that support each PICOTT element and criterion match."""
 
-    # Configure MCP server URL - needs to be accessible from OpenAI's servers
-    # In production, this should be your deployed server URL
-    if os.getenv("HEROKU_APP_NAME"):
-        # Running on Heroku - use the public URL
-        app_name = os.getenv("HEROKU_APP_NAME")
-        mcp_url = f"https://{app_name}.herokuapp.com/sse/"
-    elif os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
-        # Running on Replit - use the public URL with port
-        repl_slug = os.getenv("REPL_SLUG")
-        repl_owner = os.getenv("REPL_OWNER")
-        mcp_url = f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"
-    else:
-        # Local development fallback
-        mcp_url = "http://localhost:8001/sse/"
+    # Get the appropriate MCP server URL based on environment
+    mcp_url = get_mcp_url()
 
     try:
         # Launch the deep research job with proper configuration per docs
@@ -252,7 +299,7 @@ def run_systematic_screening(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
+    mcp_url: Optional[str] = None,
     callback=None,
     use_multi_agent: bool = False,
     search_mode: str = "fulltext"

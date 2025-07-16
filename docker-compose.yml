@@ -17,7 +17,9 @@ services:
       - STREAMLIT_PORT=8000
       - EXTERNAL_HOST=${EXTERNAL_HOST:-localhost}
       - EXTERNAL_PORT=${EXTERNAL_PORT:-8001}
+      - EXTERNAL_PROTOCOL=${EXTERNAL_PROTOCOL:-http}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DOCKER_CONTAINER=true
     volumes:
       - ./data:/app/data
       - ./citations.db:/app/citations.db
@@ -28,6 +30,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    command: python main.py --mode both
 
   # Optional PostgreSQL database for production
   postgres:
@@ -42,6 +45,35 @@ services:
       - "5432:5432"
     profiles:
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deepresearch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Traefik reverse proxy for production deployment
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL:-admin@example.com}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "letsencrypt:/letsencrypt"
+    profiles:
+      - production
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  letsencrypt:
