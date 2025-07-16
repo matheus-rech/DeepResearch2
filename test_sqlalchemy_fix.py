@@ -12,7 +12,7 @@ from database import generate_citation_embeddings
 def test_embedding_generation():
     """Test that citation embeddings can be generated"""
     try:
-        stats = generate_citation_embeddings()
+        stats = database.generate_citation_embeddings()
         print(f"Embedding generation stats: {stats}")
         assert isinstance(stats, dict)
         return True
