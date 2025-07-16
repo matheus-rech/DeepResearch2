@@ -4,8 +4,7 @@ Ensures citations have required fields, especially abstracts
 """
 import pandas as pd
 import logging
-from typing import Dict, List, Tuple, Optional
-import re
+from typing import Dict, List, Tuple
 from parsers import enrich_citations_with_crossref
 
 logger = logging.getLogger(__name__)

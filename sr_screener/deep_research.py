@@ -6,7 +6,7 @@ import os
 import json
 import time
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from openai import OpenAI
 import httpx
 
@@ -306,7 +306,7 @@ def run_systematic_screening(
 
         # Extract results
         if callback:
-            callback(f"Processing screening results...")
+            callback("Processing screening results...")
         results_data = poll_job_status(response)
 
         # Parse results

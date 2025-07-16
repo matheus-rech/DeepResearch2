@@ -984,7 +984,7 @@ def show_results_step():
                         st.markdown(f"**Confidence:** {citation['confidence']}")
 
                         # View full citation button
-                        if st.button(f"View Full", key=f"view_{citation['id']}"):
+                        if st.button("View Full", key=f"view_{citation['id']}"):
                             full_citation = db.fetch_citation(citation['id'])
                             if full_citation:
                                 st.json(full_citation)
@@ -1014,7 +1014,7 @@ def show_results_step():
                                 st.markdown(f"- {criterion}")
 
                         # Show PICOTT elements for context
-                        if citation.get("picott") and st.checkbox(f"Show PICOTT elements", key=f"picott_{citation['id']}"):
+                        if citation.get("picott") and st.checkbox("Show PICOTT elements", key=f"picott_{citation['id']}"):
                             for element, quote in citation["picott"].items():
                                 if quote and quote != "Not found":
                                     element_name = element.replace("studyType", "Study Type").capitalize()
