@@ -23,7 +23,7 @@ def launch_screening_job(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
+    mcp_url: str = "https://repl-nix-workspace-bvibijka.fly.dev/sse/",
     search_mode: str = "fulltext"
 ) -> str:
     """
@@ -102,6 +102,10 @@ Focus on extracting EXACT quotes that support each PICOTT element and criterion 
         repl_slug = os.getenv("REPL_SLUG")
         repl_owner = os.getenv("REPL_OWNER")
         mcp_url = f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"
+    elif os.getenv("FLY_APP_NAME"):
+        # Running on Fly.dev - use the public URL
+        app_name = os.getenv("FLY_APP_NAME", "repl-nix-workspace-bvibijka")
+        mcp_url = f"https://{app_name}.fly.dev/sse/"
     else:
         # Local development fallback
         mcp_url = "http://localhost:8001/sse/"
@@ -252,7 +256,7 @@ def run_systematic_screening(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
+    mcp_url: str = "https://repl-nix-workspace-bvibijka.fly.dev/sse/",
     callback=None,
     use_multi_agent: bool = False,
     search_mode: str = "fulltext"
