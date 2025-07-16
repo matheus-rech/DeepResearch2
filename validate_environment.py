@@ -74,9 +74,9 @@ def generate_environment_report() -> Tuple[bool, str]:
     
     # Port availability
     ports = check_required_ports()
-    checks.append(f"Available ports: {len(ports)}/3")
-    
-    all_ok = db_ok and openai_ok and len(ports) >= 3
+    checks.append(f"Available ports: {len(ports)}/{len(required_ports)}")
+
+    all_ok = db_ok and openai_ok and len(ports) >= len(required_ports)
     report = "\n".join(checks)
     
     return all_ok, report
