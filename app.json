@@ -1,0 +1,31 @@
+{
+  "name": "DeepResearch2-MCP-Server",
+  "description": "MCP Server for OpenAI Deep Research API integration",
+  "repository": "https://github.com/matheus-rech/DeepResearch2",
+  "keywords": ["openai", "deep-research", "mcp", "systematic-review"],
+  "env": {
+    "OPENAI_API_KEY": {
+      "description": "Your OpenAI API key for Deep Research API access",
+      "required": true
+    },
+    "DATABASE_URL": {
+      "description": "Database connection URL (provided by Heroku PostgreSQL addon)",
+      "required": true
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level (INFO, DEBUG, etc.)",
+      "value": "INFO",
+      "required": false
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:hobby-dev"
+    }
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}

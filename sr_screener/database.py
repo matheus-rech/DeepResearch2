@@ -18,7 +18,8 @@ from sqlalchemy.pool import StaticPool
 logger = logging.getLogger(__name__)
 
 # Database configuration
-DATABASE_URL = os.environ.get("DATABASE_URL")
+from .database_url import get_database_url
+DATABASE_URL = get_database_url()
 Base = declarative_base()
 
 # OpenAI client for embeddings
