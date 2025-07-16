@@ -149,11 +149,12 @@ def show_upload_step():
         - **RIS** (.ris) - From EndNote, Mendeley, etc.
         - **CSV** (.csv) - Generic format with standard columns
         - **EndNote XML** (.xml) - From EndNote library
+        - **PubMed Text** (.txt) - From PubMed abstract export
         """)
 
         uploaded_file = st.file_uploader(
             "Choose a citation file",
-            type=['xml', 'ris', 'csv', 'nbib'],
+            type=['xml', 'ris', 'csv', 'nbib', 'txt'],
             help="Upload your exported citations from reference management software"
         )
 

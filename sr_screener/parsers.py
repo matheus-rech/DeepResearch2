@@ -322,6 +322,113 @@ def parse_endnote_xml(file_obj) -> pd.DataFrame:
     return pd.DataFrame(citations)
 
 
+def parse_pubmed_text(file_obj) -> pd.DataFrame:
+    """
+    Parse PubMed text export format with abstracts.
+    """
+    import re
+    
+    content = file_obj.read().decode('utf-8', errors='ignore')
+    citations = []
+    
+    entries = re.split(r'\n(?=\d+\.\s)', content)
+    
+    for entry in entries:
+        if not entry.strip():
+            continue
+            
+        lines = entry.strip().split('\n')
+        if not lines:
+            continue
+            
+        # Extract PMID, DOI, title, abstract, etc.
+        citation = {
+            'id': '',
+            'title': '',
+            'abstract': '',
+            'year': None,
+            'authors': [],
+            'journal': '',
+            'doi': '',
+            'mesh_terms': [],
+            'keywords': [],
+            'raw_data': {'source': 'pubmed_text'}
+        }
+        
+        full_text = '\n'.join(lines)
+        
+        # Extract PMID
+        pmid_match = re.search(r'PMID:\s*(\d+)', full_text)
+        if pmid_match:
+            citation['id'] = f"PMID:{pmid_match.group(1)}"
+        
+        # Extract DOI
+        doi_match = re.search(r'doi:\s*(10\.\S+)', full_text, re.IGNORECASE)
+        if doi_match:
+            citation['doi'] = doi_match.group(1)
+        
+        # Extract title (lines after journal until empty line or Author information)
+        title_lines = []
+        start_collecting = False
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line:
+                if start_collecting:
+                    break
+                continue
+            if i == 0:  # Skip first line (journal info)
+                continue
+            if line.startswith('Author information:'):
+                break
+            if 'PMID:' in line or 'DOI:' in line:
+                break
+            if not start_collecting and line:
+                start_collecting = True
+            if start_collecting:
+                title_lines.append(line)
+                if i + 1 < len(lines) and not lines[i + 1].strip():
+                    break
+        citation['title'] = ' '.join(title_lines)
+        
+        # Extract year from journal line
+        year_match = re.search(r'\b(19|20)\d{2}\b', lines[0] if lines else '')
+        if year_match:
+            citation['year'] = int(year_match.group())
+        
+        # Extract journal from first line (after the number)
+        if lines:
+            first_line = lines[0]
+            journal_match = re.match(r'\d+\.\s*(.+?)\.', first_line)
+            if journal_match:
+                citation['journal'] = journal_match.group(1).strip()
+        
+        # Extract abstract (everything after author info until Copyright/DOI/PMID)
+        abstract_lines = []
+        in_abstract = False
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if 'Author information:' in line:
+                in_abstract = False
+                continue
+            if in_abstract and ('Copyright' in line or 'DOI:' in line or 'PMID:' in line):
+                break
+            if not in_abstract and line and not line.startswith('Author information:') and '(' not in line and ')' not in line:
+                if len(line) > 50 and not line.endswith(':'):
+                    in_abstract = True
+            if in_abstract:
+                abstract_lines.append(line)
+        
+        citation['abstract'] = ' '.join(abstract_lines).strip()
+        
+        if citation['id'] or citation['title']:
+            citations.append(citation)
+    
+    return pd.DataFrame(citations)
+
+
+
 def detect_format(filename: str, content: bytes) -> str:
     """
     Detect citation file format from filename and content.
@@ -344,6 +451,11 @@ def detect_format(filename: str, content: bytes) -> str:
         return 'csv'
     elif filename_lower.endswith('.nbib'):
         return 'pubmed_nbib'
+    elif filename_lower.endswith('.txt'):
+        # Check if it's PubMed abstract format
+        content_str = content.decode('utf-8', errors='ignore')[:2000]
+        if any(pattern in content_str for pattern in ['PMID:', 'DOI:', 'J Affect Disord', 'Brain Stimul', 'Front Psychiatry']):
+            return 'pubmed_text'
     
     # Check by content if no clear extension
     try:
@@ -354,6 +466,8 @@ def detect_format(filename: str, content: bytes) -> str:
             return 'pubmed_xml'
         elif content_str.strip().startswith('PMID-'):
             return 'pubmed_nbib'
+        elif any(pattern in content_str for pattern in ['PMID:', 'DOI:', '. 20']):
+            return 'pubmed_text'
     except Exception:
         pass
     
@@ -383,6 +497,9 @@ def parse_citations(file_obj, filename: str) -> pd.DataFrame:
         return parse_csv(file_obj)
     elif file_format == 'endnote_xml':
         return parse_endnote_xml(file_obj)
+    elif file_format == 'pubmed_text':
+        file_obj = io.BytesIO(content)
+        return parse_pubmed_text(file_obj)
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
 

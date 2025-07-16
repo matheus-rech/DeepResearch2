@@ -34,7 +34,7 @@ def create_server():
     db.init_db()
     
     # Create FastMCP server
-    mcp = FastMCP("Systematic_Review_MCP_Server", instructions=server_instructions)
+    mcp = FastMCP("DeepResearchServer", instructions=server_instructions)
     
     @mcp.tool()
     async def search(query: str, limit: Optional[int] = None, mode: str = "fulltext") -> Dict[str, Any]:
@@ -178,7 +178,7 @@ def create_server():
         """
         return {
             "status": "healthy",
-            "server": "Systematic_Review_MCP_Server",
+            "server": "DeepResearchServer",
             "timestamp": str(time.time())
         }
     
@@ -229,14 +229,14 @@ def main(port=8001):
             tools = await server.get_tools()
             return JSONResponse({
                 "status": "healthy",
-                "server": "Systematic_Review_MCP_Server",
+                "server": "DeepResearchServer",
                 "timestamp": str(time.time()),
                 "tools_count": len(tools)
             })
         except Exception as e:
             return JSONResponse({
                 "status": "unhealthy",
-                "server": "Systematic_Review_MCP_Server",
+                "server": "DeepResearchServer",
                 "timestamp": str(time.time()),
                 "error": str(e)
             }, status_code=500)
