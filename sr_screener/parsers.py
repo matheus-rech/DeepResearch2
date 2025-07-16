@@ -367,40 +367,31 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
         if doi_match:
             citation['doi'] = doi_match.group(1)
         
-        # Extract title (lines after journal until empty line or Author information)
-        title_lines = []
-        start_collecting = False
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if not line:
-                if start_collecting:
-                    break
-                continue
-            if i == 0:  # Skip first line (journal info)
-                continue
-            if line.startswith('Author information:'):
-                break
-            if 'PMID:' in line or 'DOI:' in line:
-                break
-            if not start_collecting and line:
-                start_collecting = True
-            if start_collecting:
-                title_lines.append(line)
-                if i + 1 < len(lines) and not lines[i + 1].strip():
-                    break
-        citation['title'] = ' '.join(title_lines)
-        
-        # Extract year from journal line
-        year_match = re.search(r'\b(19|20)\d{2}\b', lines[0] if lines else '')
-        if year_match:
-            citation['year'] = int(year_match.group())
-        
-        # Extract journal from first line (after the number)
+        # Extract title from the first line after authors and journal info
         if lines:
             first_line = lines[0]
-            journal_match = re.match(r'\d+\.\s*(.+?)\.', first_line)
-            if journal_match:
-                citation['journal'] = journal_match.group(1).strip()
+            content = re.sub(r'^\d+\.\s*', '', first_line)
+            
+            parts = content.split('. ')
+            if len(parts) >= 3:
+                authors_part = parts[0]
+                citation['authors'] = [name.strip() for name in authors_part.split(',')]
+                
+                citation['title'] = parts[1].strip()
+                
+                journal_part = parts[2]
+                
+                # Extract journal name (everything before year)
+                journal_match = re.match(r'(.+?)\.\s*(19|20)\d{2}', journal_part)
+                if journal_match:
+                    citation['journal'] = journal_match.group(1).strip()
+                    
+                # Extract year from journal part
+                year_match = re.search(r'\b(19|20)\d{2}\b', journal_part)
+                if year_match:
+                    citation['year'] = int(year_match.group())
+            else:
+                citation['title'] = content.split('.')[0] if '.' in content else content
         
         # Extract abstract (everything after author info until Copyright/DOI/PMID)
         abstract_lines = []
