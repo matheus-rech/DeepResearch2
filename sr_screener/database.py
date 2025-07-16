@@ -15,7 +15,10 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .database_url import get_database_url
+try:
+    from .database_url import get_database_url
+except ImportError:
+    from database_url import get_database_url
 
 logger = logging.getLogger(__name__)
 
