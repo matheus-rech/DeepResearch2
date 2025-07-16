@@ -44,7 +44,7 @@ def validate_openai_key() -> bool:
 def check_required_ports() -> Tuple[List[int], List[int]]:
     """Check if required ports are available (i.e., not already in use)."""
     import socket
-    required_ports = [8501, 8000, 5432]
+    required_ports = REQUIRED_PORTS
     available_ports = []
     
     for port in required_ports:
