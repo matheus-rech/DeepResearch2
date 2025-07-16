@@ -7,6 +7,7 @@ Tests core functionality, environment setup, and integration capabilities
 import os
 import sys
 import asyncio
+import platform
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
