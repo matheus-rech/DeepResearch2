@@ -83,7 +83,7 @@ async def analyze_deepresearch_ui():
             for i, button in enumerate(buttons[:5]):  # First 5 buttons
                 text = await button.text_content()
                 if text:
-                    print(f"  - Button {i+1}: {text.strip()}")
+                    print(f"  - Button {i + 1}: {text.strip()}")
             
             # Check for data tables
             tables = await page.locator("[data-testid='stDataFrame']").count()
@@ -97,7 +97,7 @@ async def analyze_deepresearch_ui():
                 print(f"✓ Tabs found: {len(tabs)}")
                 for i, tab in enumerate(tabs):
                     text = await tab.text_content()
-                    print(f"  - Tab {i+1}: {text}")
+                    print(f"  - Tab {i + 1}: {text}")
                     
             # Check for forms/inputs
             inputs = await page.locator("input[type='text'], textarea").count()
@@ -112,8 +112,8 @@ async def analyze_deepresearch_ui():
                 for i, tab in enumerate(tabs[:3]):  # Click first 3 tabs
                     await tab.click()
                     await page.wait_for_timeout(1000)
-                    await page.screenshot(path=f"screenshots/05_tab_{i+1}.png", full_page=False)
-                    print(f"✓ Clicked tab {i+1} and captured screenshot")
+                    await page.screenshot(path=f"screenshots/05_tab_{i + 1}.png", full_page=False)
+                    print(f"✓ Clicked tab {i + 1} and captured screenshot")
             
             # Check for any error messages
             errors = await page.locator(".stAlert, [data-testid='stAlert']").count()

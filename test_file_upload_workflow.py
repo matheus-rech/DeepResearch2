@@ -167,7 +167,7 @@ async def file_upload_workflow_test():
                     if await textarea.is_visible():
                         await textarea.fill(text)
                         await page.wait_for_timeout(1000)
-                        print(f"✅ Filled textarea {i+1}: {text[:30]}...")
+                        print(f"✅ Filled textarea {i + 1}: {text[:30]}...")
                 
                 await page.screenshot(path=SCREENSHOT_DIR / "06_criteria_filled.png", full_page=True)
             

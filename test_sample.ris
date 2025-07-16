@@ -1,0 +1,39 @@
+TY  - JOUR
+AU  - Smith, John A.
+AU  - Johnson, Mary B.
+AU  - Brown, David C.
+TI  - Machine Learning Applications in Healthcare: A Comprehensive Review
+JO  - Journal of Medical Informatics
+VL  - 45
+IS  - 3
+SP  - 123
+EP  - 135
+PY  - 2023
+DO  - 10.1234/jmi.2023.123
+AB  - This comprehensive review examines the current state of machine learning applications in healthcare settings. We analyzed 150 studies published between 2020-2023, focusing on diagnostic imaging, drug discovery, and personalized treatment plans. Our findings indicate significant promise in these areas, though challenges remain in data privacy, algorithm transparency, and clinical integration.
+ER  - 
+
+TY  - JOUR
+AU  - Wilson, Carol
+AU  - Taylor, Emma
+TI  - Deep Learning in Medical Image Analysis: Current Trends and Future Directions
+JO  - Medical Image Analysis
+VL  - 67
+SP  - 102089
+PY  - 2023
+DO  - 10.1016/j.media.2023.102089
+AB  - Medical image analysis has been revolutionized by deep learning techniques. This systematic review analyzes 200 papers from 2019-2023 focusing on convolutional neural networks, transformers, and generative models. We found that deep learning achieves state-of-the-art performance in radiology, pathology, and ophthalmology applications.
+ER  - 
+
+TY  - JOUR
+AU  - Garcia, Maria
+AU  - Lee, Kevin
+AU  - Patel, Raj
+TI  - Natural Language Processing in Electronic Health Records: Opportunities and Challenges
+JO  - Journal of Biomedical Informatics
+VL  - 128
+SP  - 104567
+PY  - 2023
+DO  - 10.1016/j.jbi.2023.104567
+AB  - Electronic health records contain vast amounts of unstructured text data that could provide valuable insights for clinical research and patient care. This review examines natural language processing techniques applied to EHR data, including named entity recognition, relation extraction, and clinical decision support systems.
+ER  - 
