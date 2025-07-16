@@ -119,7 +119,7 @@ def test_citation_parsing():
         for i, (_, citation) in enumerate(citations.head(3).iterrows()):  # Check first 3
             missing_fields = [field for field in required_fields if not citation.get(field)]
             if missing_fields:
-                print(f"❌ Citation {i+1} missing fields: {missing_fields}")
+                print(f"❌ Citation {i + 1} missing fields: {missing_fields}")
                 return False
         
         print("✅ Citation structure validation passed")
