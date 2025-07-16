@@ -41,7 +41,7 @@ def validate_openai_key() -> bool:
         logger.error(f"OpenAI key validation failed: {e}")
         return False
 
-def check_required_ports() -> List[int]:
+def check_required_ports() -> Tuple[List[int], List[int]]:
     """Check if required ports are available (i.e., not already in use)."""
     import socket
     required_ports = [8501, 8000, 5432]
@@ -56,7 +56,7 @@ def check_required_ports() -> List[int]:
             except OSError:
                 logger.warning(f"Port {port} is already in use and not available.")
     
-    return available_ports
+    return available_ports, required_ports
 
 def generate_environment_report() -> Tuple[bool, str]:
     """Generate comprehensive environment validation report"""
@@ -71,10 +71,10 @@ def generate_environment_report() -> Tuple[bool, str]:
     checks.append(f"OpenAI API: {'✓' if openai_ok else '✗'}")
     
     # Port availability
-    ports = check_required_ports()
-    checks.append(f"Available ports: {len(ports)}/{len(required_ports)}")
+    available_ports, required_ports = check_required_ports()
+    checks.append(f"Available ports: {len(available_ports)}/{len(required_ports)}")
 
-    all_ok = db_ok and openai_ok and len(ports) >= len(required_ports)
+    all_ok = db_ok and openai_ok and len(available_ports) >= len(required_ports)
     report = "\n".join(checks)
     
     return all_ok, report
