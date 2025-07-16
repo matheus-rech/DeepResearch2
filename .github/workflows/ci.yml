@@ -49,9 +49,7 @@ jobs:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         VECTOR_STORE_ID: ${{ secrets.VECTOR_STORE_ID }}
       run: |
-        python test_database_compatibility.py
-        python test_quick_validation.py
-        python final_production_test.py
+        pytest test_database_compatibility.py test_quick_validation.py final_production_test.py -v --tb=short
 
   docker:
     needs: test

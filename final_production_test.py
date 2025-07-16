@@ -30,25 +30,25 @@ async def test_production_ready():
                 print(f"✓ Tool '{tool_name}' registered successfully")
             else:
                 print(f"✗ Tool '{tool_name}' missing")
-                return False
+                assert False, f"Tool '{tool_name}' missing"
         
         print("✓ All MCP tools registered and ready")
         print("✓ DeepResearch2 is production ready!")
         print("✓ SSE endpoint will be available at http://localhost:8001/sse/")
         print("✓ Ready for ChatGPT Deep Research integration")
         
-        return True
+        assert True, "Production test passed"
         
     except Exception as e:
         print(f"✗ Production test failed: {e}")
         traceback.print_exc()
-        return False
+        assert False, f"Production test failed: {e}"
 
 if __name__ == "__main__":
-    result = asyncio.run(test_production_ready())
-    if result:
+    try:
+        asyncio.run(test_production_ready())
         print("\n🎉 PRODUCTION READY: All systems operational!")
         sys.exit(0)
-    else:
+    except AssertionError:
         print("\n❌ PRODUCTION FAILED: Issues detected")
         sys.exit(1)
