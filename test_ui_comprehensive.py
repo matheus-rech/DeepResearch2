@@ -5,7 +5,6 @@ Comprehensive UI test with Playwright - captures every step with screenshots
 import asyncio
 import subprocess
 import sys
-import time
 import os
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -146,7 +145,7 @@ async def comprehensive_ui_test():
             # Generate summary report
             print("\n📋 UI Test Summary:")
             print("=" * 50)
-            print(f"🌐 Application URL: http://localhost:8000")
+            print("🌐 Application URL: http://localhost:8000")
             print(f"📝 Page Title: {title if title else 'Not detected'}")
             print(f"🏷️  Navigation Tabs: {len(tabs) if tabs else 0}")
             print(f"📁 File Upload: {'Available' if await file_upload.count() > 0 else 'Not found'}")

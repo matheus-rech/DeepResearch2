@@ -13,27 +13,31 @@ def test_mcp_server_creation():
     
     try:
         import mcp_server
+        import asyncio
         print("✓ Successfully imported mcp_server module")
         
-        server = mcp_server.create_server()
-        print("✓ MCP server instance created successfully")
-        
-        print(f"Server type: {type(server)}")
-        print(f"Available attributes: {[attr for attr in dir(server) if not attr.startswith('_')]}")
-        
-        if hasattr(server, '_tools'):
-            print(f"✓ Server has _tools attribute: {len(server._tools)} tools registered")
-            for tool_name in server._tools.keys():
-                print(f"  - Tool: {tool_name}")
-        else:
-            print("✗ Server missing _tools attribute")
+        async def test_async_creation():
+            server = mcp_server.create_server()
+            print("✓ MCP server instance created successfully")
             
-        if hasattr(server, 'search') and hasattr(server, 'fetch'):
-            print("✓ MCP tools registered (search, fetch)")
-            return True
-        else:
-            print("✗ MCP tools not properly registered")
-            return False
+            print(f"Server type: {type(server)}")
+            print(f"Available attributes: {[attr for attr in dir(server) if not attr.startswith('_')]}")
+            
+            tools = await server.get_tools()
+            if tools and len(tools) > 0:
+                print(f"✓ Server has {len(tools)} tools registered")
+                for tool in tools:
+                    if isinstance(tool, dict):
+                        tool_name = tool.get('name', 'unknown')
+                        print(f"  - Tool: {tool_name}")
+                    else:
+                        print(f"  - Tool: {tool}")
+                return True
+            else:
+                print("✗ No tools registered")
+                return False
+        
+        return asyncio.run(test_async_creation())
             
     except Exception as e:
         print(f"✗ MCP server creation failed: {e}")
