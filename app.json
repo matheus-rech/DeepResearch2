@@ -20,7 +20,7 @@
   },
   "addons": [
     {
-      "plan": "heroku-postgresql:standard-0",
+      "plan": "heroku-postgresql:basic",
       "notes": "The default plan has been updated to 'standard-0', which is more suitable for production use. However, you should evaluate your application's expected usage and upgrade to a higher-tier plan (e.g., 'premium-0') if needed to handle larger datasets and more concurrent connections."
     }
   ],
