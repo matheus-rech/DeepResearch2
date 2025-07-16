@@ -162,16 +162,63 @@ def show_upload_step():
 
             col1, col2 = st.columns([1, 4])
             with col1:
+                use_claude = st.checkbox("🤖 Use Claude AI Parser", 
+                                       value=True, 
+                                       help="Use Claude for intelligent citation parsing (recommended)")
+                
                 if st.button("📥 Parse & Load", type="primary", use_container_width=True):
-                    with st.spinner("Parsing citations..."):
+                    with st.spinner("🤖 Parsing citations with AI..." if use_claude else "📄 Parsing citations..."):
                         try:
-                            # Parse the file
-                            df = parsers.parse_citations(uploaded_file, uploaded_file.name)
+                            # Save uploaded file temporarily
+                            temp_file_path = f"temp_{uploaded_file.name}"
+                            with open(temp_file_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+                            
+                            if use_claude:
+                                # Use enhanced Claude parsing
+                                from enhanced_parsers import parse_any_citation_file, validate_citations_with_claude, format_citations_for_ui
+                                
+                                citations = parse_any_citation_file(temp_file_path, use_claude=True)
+                                st.success(f"🤖 Claude successfully parsed {len(citations)} citations!")
+                                
+                                # Claude validation
+                                with st.spinner("🔍 Validating citation quality with Claude..."):
+                                    claude_validation = validate_citations_with_claude(citations)
+                                    
+                                    # Show Claude quality assessment
+                                    quality_score = claude_validation.get('quality_score', 0.8) * 100
+                                    if quality_score >= 90:
+                                        st.success(f"🎯 Claude Quality Score: {quality_score:.1f}% - Excellent")
+                                    elif quality_score >= 80:
+                                        st.info(f"📊 Claude Quality Score: {quality_score:.1f}% - Good")
+                                    else:
+                                        st.warning(f"⚠️ Claude Quality Score: {quality_score:.1f}% - Needs attention")
+                                    
+                                    # Show Claude recommendations
+                                    if claude_validation.get('recommendations'):
+                                        st.info("💡 **Claude Recommendations:**")
+                                        for rec in claude_validation['recommendations'][:3]:
+                                            st.write(f"• {rec}")
+                                    
+                                    # Show issues found
+                                    if claude_validation.get('issues_found'):
+                                        with st.expander("🔍 Issues Detected by Claude"):
+                                            for issue in claude_validation['issues_found'][:5]:
+                                                st.write(f"⚠️ {issue}")
+                                
+                                # Convert to DataFrame for UI
+                                df = format_citations_for_ui(citations)
+                                
+                            else:
+                                # Use traditional parsing
+                                df = parsers.parse_citations(uploaded_file, uploaded_file.name)
+                                st.success(f"📄 Successfully parsed {len(df)} citations!")
 
-                            # Show preview
-                            st.success(f"Successfully parsed {len(df)} citations!")
+                            # Clean up temp file
+                            if temp_file_path and os.path.exists(temp_file_path):
+                                os.unlink(temp_file_path)
 
-                            # Validate citations
+                            # Traditional validation for comparison
                             validator = CitationValidator()
                             validated_df, validation_report = validator.validate_citations(df)
                         

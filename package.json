@@ -1,0 +1,51 @@
+{
+  "name": "deepresearch2-claude-integration",
+  "version": "1.0.0",
+  "description": "Deep Research with Claude Code SDK integration",
+  "scripts": {
+    "claude:install": "npm install -g @claude-code/cli",
+    
+    "lint:citations": "find . -name '*.csv' -o -name '*.ris' | xargs -I {} sh -c 'echo \"🔍 Checking {}...\" && cat {} | claude-code -p \"You are a citation format linter. Check for: 1) Missing fields 2) Format issues 3) Invalid DOIs. Report: filename:line - issue\" --output-format text'",
+    
+    "lint:criteria": "cat sr_screener/sample_criteria.json | claude-code -p 'Validate PICOTT criteria for completeness, clarity, and specificity. Return JSON with validation results.' --output-format json > criteria_validation.json",
+    
+    "review:changes": "git diff main | claude-code -p 'Review these Deep Research changes for: 1) Logic errors 2) Security issues 3) Performance problems. Be concise and specific.' --output-format text",
+    
+    "screen:citations": "./sr_screener/claude_screening.sh",
+    
+    "generate:report": "cat screening_results.json | claude-code -p 'Generate publication-ready systematic review report with PRISMA flow, statistics, and recommendations' --output-format text > screening_report.md",
+    
+    "validate:structure": "find sr_screener -name '*.py' | xargs -I {} sh -c 'echo \"📋 Validating {}...\" && cat {} | claude-code -p \"Check Python code structure, imports, and best practices\" --output-format text'",
+    
+    "analyze:workflow": "cat sr_screener/app.py | claude-code -p 'Analyze this Streamlit workflow for UX improvements and bottlenecks' --output-format json > workflow_analysis.json",
+    
+    "fix:imports": "git diff main --name-only | grep '\\.py$' | xargs -I {} sh -c 'cat {} | claude-code -p \"Fix import statements and remove unused imports. Return corrected code.\" --output-format text > {}.fixed && mv {}.fixed {}'",
+    
+    "optimize:database": "cat sr_screener/database.py | claude-code -p 'Suggest database query optimizations and schema improvements' --output-format text > db_optimization.md",
+    
+    "test:generate": "find sr_screener -name '*.py' -not -name 'test_*' | xargs -I {} sh -c 'echo \"🧪 Generating tests for {}...\" && cat {} | claude-code -p \"Generate comprehensive pytest tests for this module\" --output-format text > test_{}.py'",
+    
+    "claude:pipeline": "echo 'Running complete Claude pipeline...' && npm run lint:citations && npm run lint:criteria && npm run screen:citations && npm run generate:report",
+    
+    "claude:review": "echo '🔍 Claude Code Review Pipeline' && npm run review:changes && npm run validate:structure && npm run analyze:workflow"
+  },
+  "dependencies": {
+    "@claude-code/cli": "^1.0.0"
+  },
+  "devDependencies": {
+    "jq": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "claude-config": {
+    "output_formats": ["text", "json", "stream-json"],
+    "max_tokens": 4096,
+    "temperature": 0.1,
+    "prompts": {
+      "citation_linter": "You are a citation format linter. Check for missing fields, format issues, and invalid DOIs.",
+      "code_reviewer": "Review code for logic errors, security issues, and performance problems.",
+      "test_generator": "Generate comprehensive pytest tests following best practices."
+    }
+  }
+}
