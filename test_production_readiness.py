@@ -71,7 +71,7 @@ def test_mcp_server_creation():
         server = mcp_server.create_server()
         print("✅ MCP server created successfully")
         
-        tools = asyncio.run(server.get_tools())
+        tools = asyncio.get_event_loop().run_until_complete(server.get_tools())
         expected_tools = ["search", "fetch", "health_check", "corpus_info"]
         
         tool_names = []
