@@ -405,7 +405,26 @@ def show_upload_step():
                     if df['year'].notna().any():
                         min_year = int(df['year'].min())
                         max_year = int(df['year'].max())
-                        year_range = st.slider("Publication Year Range", min_year, max_year, (min_year, max_year))
+                        # Fix slider bug when min_year equals max_year
+                        if min_year == max_year:
+                            year_range = (min_year, max_year)
+                            st.write(f"📅 Publication Year: {min_year}")
+                        elif max_year - min_year < 1:
+                            # Handle case where range is too small
+                            year_range = (min_year, max_year)
+                            st.write(f"📅 Publication Years: {min_year}-{max_year}")
+                        else:
+                            try:
+                                year_range = st.slider("Publication Year Range", 
+                                                     min_value=min_year, 
+                                                     max_value=max_year, 
+                                                     value=(min_year, max_year),
+                                                     key="year_range_slider")
+                            except Exception as e:
+                                # Fallback if slider fails
+                                year_range = (min_year, max_year)
+                                st.write(f"📅 Publication Years: {min_year}-{max_year}")
+                                st.caption(f"Year filter disabled due to data range")
                     else:
                         year_range = None
 
@@ -659,7 +678,9 @@ def show_criteria_step():
             st.rerun()
 
     with col6:
-        if st.button("Save & Continue →", type="primary", use_container_width=True):
+        # Fix button container to avoid blocking issues
+        st.write("")  # Add spacing
+        if st.button("Save & Continue →", type="primary", use_container_width=True, key="save_continue_btn"):
             # Validate criteria
             if not all([population, intervention, outcome]):
                 st.error("Please fill in at least Population, Intervention, and Outcome")
