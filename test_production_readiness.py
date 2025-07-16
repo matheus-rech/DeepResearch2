@@ -138,7 +138,7 @@ def test_vector_store_mode():
         server = main.create_server()
         print("✅ Vector store server created successfully")
         
-        tools = asyncio.run(server.get_tools())
+        tools = asyncio.get_event_loop().run_until_complete(server.get_tools())
         tool_names = []
         for tool in tools:
             if hasattr(tool, 'name'):
