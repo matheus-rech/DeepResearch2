@@ -1,0 +1,148 @@
+PMID- 12345678
+OWN - NLM
+STAT- MEDLINE
+DCOM- 20230315
+LR  - 20230301
+IS  - 1234-5678 (Electronic)
+IS  - 0123-4567 (Print)
+VI  - 45
+IP  - 3
+DP  - 2023 Mar
+TI  - Deep learning approaches for systematic literature review automation: A comprehensive analysis.
+PG  - 123-135
+LID - 10.1234/example.2023.12345 [doi]
+AB  - BACKGROUND: Systematic literature reviews are essential for evidence-based medicine but are time-consuming and resource-intensive. OBJECTIVE: To evaluate the effectiveness of deep learning approaches in automating systematic literature review processes. METHODS: We conducted a comprehensive analysis of 150 studies published between 2018-2023 that utilized machine learning for literature screening. RESULTS: Deep learning models achieved 92% accuracy in title/abstract screening compared to 78% for traditional keyword-based approaches. CONCLUSION: AI-powered systematic review tools show significant promise for reducing manual workload while maintaining high accuracy.
+AD  - Department of Medical Informatics, University of Research, City, Country.
+FAU - Smith, John A
+AU  - Smith JA
+FAU - Johnson, Mary B
+AU  - Johnson MB
+FAU - Brown, David C
+AU  - Brown DC
+LA  - eng
+PT  - Journal Article
+PT  - Research Support, Non-U.S. Gov't
+DEP - 20230215
+PL  - United States
+TA  - J Med Inform
+JT  - Journal of Medical Informatics
+JID - 1234567
+SB  - IM
+MH  - Artificial Intelligence/*methods
+MH  - Deep Learning/*methods
+MH  - Literature Review/*methods
+MH  - Machine Learning/methods
+MH  - Systematic Reviews as Topic/*methods
+PMC - PMC9876543
+OID - NLM: PMC9876543
+EDAT- 2023/02/16 06:00
+MHDA- 2023/03/16 06:01
+CRDT- 2023/02/15 12:34
+PHST- 2022/11/15 [received]
+PHST- 2023/01/20 [revised]
+PHST- 2023/02/10 [accepted]
+PHST- 2023/02/15 [epublish]
+AID - S0123-4567(23)00123-4 [pii]
+AID - 10.1234/example.2023.12345 [doi]
+PST - ppublish
+SO  - J Med Inform. 2023 Mar;45(3):123-135. doi: 10.1234/example.2023.12345. Epub 2023 Feb 15.
+
+PMID- 23456789
+OWN - NLM
+STAT- MEDLINE
+DCOM- 20230320
+LR  - 20230305
+IS  - 2345-6789 (Electronic)
+IS  - 1234-5678 (Print)
+VI  - 28
+IP  - 2
+DP  - 2023 Feb
+TI  - Machine learning for clinical decision support in systematic reviews: A randomized controlled trial.
+PG  - 89-102
+LID - 10.5678/clinical.2023.23456 [doi]
+AB  - INTRODUCTION: Clinical decision support systems require high-quality evidence synthesis. OBJECTIVE: To assess whether machine learning-assisted systematic reviews improve clinical decision-making accuracy. DESIGN: Randomized controlled trial with 200 clinicians. INTERVENTION: Half received ML-assisted systematic review summaries, half received traditional reviews. MAIN OUTCOME: Diagnostic accuracy in clinical scenarios. RESULTS: ML-assisted group showed 15% improvement in diagnostic accuracy (p<0.001). CONCLUSION: Machine learning significantly enhances clinical decision support through improved evidence synthesis.
+AD  - Clinical Research Institute, Medical Center, City, Country.
+FAU - Wilson, Sarah E
+AU  - Wilson SE
+FAU - Davis, Michael R
+AU  - Davis MR
+FAU - Thompson, Lisa K
+AU  - Thompson LK
+LA  - eng
+PT  - Journal Article
+PT  - Randomized Controlled Trial
+PT  - Research Support, U.S. Gov't, P.H.S.
+DEP - 20230125
+PL  - England
+TA  - Clin Decis Support
+JT  - Clinical Decision Support
+JID - 2345678
+SB  - IM
+MH  - Clinical Decision-Making/*methods
+MH  - Decision Support Systems, Clinical/*methods
+MH  - Machine Learning/*methods
+MH  - Randomized Controlled Trials as Topic/*methods
+MH  - Systematic Reviews as Topic/*methods
+PMC - PMC9876544
+OID - NLM: PMC9876544
+EDAT- 2023/01/26 06:00
+MHDA- 2023/03/21 06:01
+CRDT- 2023/01/25 14:22
+PHST- 2022/10/12 [received]
+PHST- 2022/12/18 [revised]
+PHST- 2023/01/15 [accepted]
+PHST- 2023/01/25 [epublish]
+AID - S1234-5678(23)00234-5 [pii]
+AID - 10.5678/clinical.2023.23456 [doi]
+PST - ppublish
+SO  - Clin Decis Support. 2023 Feb;28(2):89-102. doi: 10.5678/clinical.2023.23456. Epub 2023 Jan 25.
+
+PMID- 34567890
+OWN - NLM
+STAT- MEDLINE
+DCOM- 20230325
+LR  - 20230310
+IS  - 3456-7890 (Electronic)
+IS  - 2345-6789 (Print)
+VI  - 12
+IP  - 1
+DP  - 2023 Jan
+TI  - Natural language processing for automated screening in systematic reviews: Performance evaluation across medical domains.
+PG  - 45-58
+LID - 10.9012/nlp.2023.34567 [doi]
+AB  - PURPOSE: To evaluate natural language processing (NLP) performance for automated screening across different medical specialties. METHODS: We tested 5 NLP models on 10,000 abstracts from cardiology, oncology, neurology, and psychiatry systematic reviews. METRICS: Sensitivity, specificity, and F1-scores were calculated for each domain. RESULTS: BERT-based models achieved highest performance (F1=0.89) in cardiology, while domain-specific models performed better in psychiatry (F1=0.91). LIMITATIONS: Performance varied significantly across medical domains. CONCLUSIONS: NLP shows promise for systematic review automation but requires domain-specific optimization.
+AD  - Institute for Health Informatics, Research University, City, Country.
+FAU - Anderson, Robert J
+AU  - Anderson RJ
+FAU - Martinez, Elena P
+AU  - Martinez EP
+FAU - Chen, Wei L
+AU  - Chen WL
+LA  - eng
+PT  - Journal Article
+PT  - Evaluation Study
+PT  - Research Support, Non-U.S. Gov't
+DEP - 20221220
+PL  - Netherlands
+TA  - Med NLP Rev
+JT  - Medical NLP Review
+JID - 3456789
+SB  - IM
+MH  - Natural Language Processing/*methods
+MH  - Systematic Reviews as Topic/*methods
+MH  - Medical Informatics/*methods
+MH  - Automation/*methods
+MH  - Performance Evaluation/*methods
+PMC - PMC9876545
+OID - NLM: PMC9876545
+EDAT- 2022/12/21 06:00
+MHDA- 2023/03/26 06:01
+CRDT- 2022/12/20 16:45
+PHST- 2022/09/08 [received]
+PHST- 2022/11/22 [revised]
+PHST- 2022/12/10 [accepted]
+PHST- 2022/12/20 [epublish]
+AID - S2345-6789(22)00345-6 [pii]
+AID - 10.9012/nlp.2023.34567 [doi]
+PST - ppublish
+SO  - Med NLP Rev. 2023 Jan;12(1):45-58. doi: 10.9012/nlp.2023.34567. Epub 2022 Dec 20.

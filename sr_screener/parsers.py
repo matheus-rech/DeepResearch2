@@ -331,7 +331,7 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
     content = file_obj.read().decode('utf-8', errors='ignore')
     citations = []
     
-    entries = re.split(r'\n(?=\d+\.\s)', content)
+    entries = re.split(r'\n(?=PMID-)', content)
     
     for entry in entries:
         if not entry.strip():
@@ -358,66 +358,48 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
         full_text = '\n'.join(lines)
         
         # Extract PMID
-        pmid_match = re.search(r'PMID:\s*(\d+)', full_text)
+        pmid_match = re.search(r'PMID-\s*(\d+)', full_text)
         if pmid_match:
             citation['id'] = f"PMID:{pmid_match.group(1)}"
         
         # Extract DOI
-        doi_match = re.search(r'doi:\s*(10\.\S+)', full_text, re.IGNORECASE)
+        doi_match = re.search(r'LID\s*-\s*(10\.\S+)\s*\[doi\]', full_text, re.IGNORECASE)
         if doi_match:
             citation['doi'] = doi_match.group(1)
         
-        # Extract title from the first line after authors and journal info
-        if lines:
-            first_line = lines[0]
-            content = re.sub(r'^\d+\.\s*', '', first_line)
-            
-            parts = content.split('. ')
-            if len(parts) >= 3:
-                authors_part = parts[0]
-                citation['authors'] = [name.strip() for name in authors_part.split(',')]
-                
-                citation['title'] = parts[1].strip()
-                
-                # Attempt to extract journal and year from parts[2] or parts[3]
-                journal_part = parts[2]
-                
-                # Extract journal name (everything before year)
-                journal_match = re.match(r'(.+?)\.\s*(19|20)\d{2}', journal_part)
-                if journal_match:
-                    citation['journal'] = journal_match.group(1).strip()
-                
-                # Extract year from journal part
-                year_match = re.search(r'\b(19|20)\d{2}\b', journal_part)
-                if year_match:
-                    citation['year'] = int(year_match.group())
-                elif len(parts) > 3:  # Check parts[3] if year is not in parts[2]
-                    journal_part = parts[3]
-                    year_match = re.search(r'\b(19|20)\d{2}\b', journal_part)
-                    if year_match:
-                        citation['year'] = int(year_match.group())
-            else:
-                citation['title'] = content.split('.')[0] if '.' in content else content
+        # Extract title
+        title_match = re.search(r'TI\s*-\s*(.+?)(?=\nPG|\nLID|\nAB|\nAD|\nFAU|\nAU|\nLA|\n\w{2,4}\s*-)', full_text, re.DOTALL)
+        if title_match:
+            citation['title'] = title_match.group(1).strip().replace('\n', ' ')
         
-        # Extract abstract (everything after author info until Copyright/DOI/PMID)
-        abstract_lines = []
-        in_abstract = False
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if 'Author information:' in line:
-                in_abstract = False
-                continue
-            if in_abstract and ('Copyright' in line or 'DOI:' in line or 'PMID:' in line):
-                break
-            if not in_abstract and line and not line.startswith('Author information:') and '(' not in line and ')' not in line:
-                if len(line) > 50 and not line.endswith(':'):
-                    in_abstract = True
-            if in_abstract:
-                abstract_lines.append(line)
+        # Extract abstract
+        abstract_match = re.search(r'AB\s*-\s*(.+?)(?=\nAD|\nFAU|\nAU|\nLA|\n\w{2,4}\s*-)', full_text, re.DOTALL)
+        if abstract_match:
+            citation['abstract'] = abstract_match.group(1).strip().replace('\n', ' ')
         
-        citation['abstract'] = ' '.join(abstract_lines).strip()
+        # Extract authors
+        authors = []
+        author_matches = re.findall(r'FAU\s*-\s*(.+)', full_text)
+        for author in author_matches:
+            authors.append(author.strip())
+        citation['authors'] = authors
+        
+        # Extract journal
+        journal_match = re.search(r'TA\s*-\s*(.+)', full_text)
+        if journal_match:
+            citation['journal'] = journal_match.group(1).strip()
+        
+        # Extract year from date
+        date_match = re.search(r'DP\s*-\s*(\d{4})', full_text)
+        if date_match:
+            citation['year'] = int(date_match.group(1))
+        
+        # Extract MeSH terms
+        mesh_terms = []
+        mesh_matches = re.findall(r'MH\s*-\s*(.+?)(?:/\*methods|\*methods|$)', full_text)
+        for mesh in mesh_matches:
+            mesh_terms.append(mesh.strip())
+        citation['mesh_terms'] = mesh_terms
         
         if citation['id'] or citation['title']:
             citations.append(citation)
@@ -460,8 +442,10 @@ def detect_format(filename: str, content: bytes) -> str:
             return 'ris'
         elif '<PubmedArticle>' in content_str:
             return 'pubmed_xml'
+        elif content_str.strip().startswith('PMID-') and any(pattern in content_str for pattern in ['TI  -', 'AB  -', 'FAU -']):
+            return 'pubmed_text'  # MEDLINE format with PMID- prefix
         elif content_str.strip().startswith('PMID-'):
-            return 'pubmed_nbib'
+            return 'pubmed_nbib'  # NBIB format
         elif any(pattern in content_str for pattern in ['PMID:', 'DOI:', '. 20']):
             return 'pubmed_text'
     except Exception:
