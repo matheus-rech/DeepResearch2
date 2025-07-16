@@ -20,7 +20,10 @@ def get_database_url():
     if database_url:
         parsed_url = urlparse(database_url)
         if parsed_url.scheme == "postgres":
-            database_url = parsed_url._replace(scheme="postgresql").geturl()
+            database_url = parsed_url._replace(scheme="postgresql")._replace(scheme="postgresql").geturl()
+            parsed_url_list = list(parsed_url)
+            parsed_url_list[0] = "postgresql"  # Update the scheme
+            database_url = urlunparse(parsed_url_list)
         
         logger.info(f"Using production database: {urlparse(database_url).scheme}")
         return database_url
