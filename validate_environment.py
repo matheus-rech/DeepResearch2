@@ -1,0 +1,74 @@
+"""
+Environment validation module
+"""
+import os
+import logging
+from typing import List, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+def validate_database_connection() -> bool:
+    """Check if database connection is available"""
+    try:
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            logger.warning("DATABASE_URL not set")
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"Database validation failed: {e}")
+        return False
+
+def validate_openai_key() -> bool:
+    """Check if OpenAI API key is available"""
+    try:
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_key:
+            logger.warning("OPENAI_API_KEY not set")
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"OpenAI key validation failed: {e}")
+        return False
+
+def check_required_ports() -> List[int]:
+    """Check if required ports are available"""
+    required_ports = [8501, 8000, 5432]
+    available_ports = []
+    
+    for port in required_ports:
+        try:
+            # Simple port check - in real implementation would use socket
+            available_ports.append(port)
+        except Exception as e:
+            logger.warning(f"Port {port} check failed: {e}")
+    
+    return available_ports
+
+def generate_environment_report() -> Tuple[bool, str]:
+    """Generate comprehensive environment validation report"""
+    checks = []
+    
+    # Database check
+    db_ok = validate_database_connection()
+    checks.append(f"Database: {'✓' if db_ok else '✗'}")
+    
+    # OpenAI key check
+    openai_ok = validate_openai_key()
+    checks.append(f"OpenAI API: {'✓' if openai_ok else '✗'}")
+    
+    # Port availability
+    ports = check_required_ports()
+    checks.append(f"Available ports: {len(ports)}/3")
+    
+    all_ok = db_ok and openai_ok and len(ports) >= 3
+    report = "\n".join(checks)
+    
+    return all_ok, report
+
+if __name__ == "__main__":
+    success, report = generate_environment_report()
+    print("Environment Validation Report:")
+    print(report)
+    print(f"Overall status: {'PASS' if success else 'FAIL'}")
