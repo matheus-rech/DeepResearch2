@@ -36,9 +36,9 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=deepresearch
-      - POSTGRES_USER=deepresearch
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD is not set. Please provide a strong password.}
+      POSTGRES_DB: deepresearch
+      POSTGRES_USER: deepresearch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-strongpassword}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
