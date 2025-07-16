@@ -6,9 +6,7 @@ Tests core functionality, environment setup, and integration capabilities
 
 import os
 import sys
-import time
 import asyncio
-import logging
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -34,7 +32,7 @@ def test_environment_setup():
         import openai
         import streamlit
         import sqlalchemy
-        print(f"✅ Core dependencies imported successfully")
+        print("✅ Core dependencies imported successfully")
         print(f"   - FastMCP: {fastmcp.__version__}")
         print(f"   - OpenAI: {openai.__version__}")
         print(f"   - Streamlit: {streamlit.__version__}")
