@@ -9,14 +9,23 @@ logger = logging.getLogger(__name__)
 
 
 def validate_database_connection() -> bool:
-    """Check if database connection is available"""
+    """Check if database connection is available by attempting to connect."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        logger.warning("DATABASE_URL not set")
+        return False
     try:
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            logger.warning("DATABASE_URL not set")
-            return False
+        from sqlalchemy import create_engine
+        from sqlalchemy.exc import SQLAlchemyError
+        engine = create_engine(database_url)
+        with engine.connect():
+            # Connection is implicitly checked by entering the 'with' block
+            pass
         return True
-    except Exception as e:
+    except ImportError:
+        logger.error("SQLAlchemy is not installed. Cannot validate database connection.")
+        return False
+    except SQLAlchemyError as e:
         logger.error(f"Database validation failed: {e}")
         return False
 
