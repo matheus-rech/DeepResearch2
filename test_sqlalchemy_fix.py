@@ -16,11 +16,13 @@ def test_embedding_generation():
         stats = database.generate_citation_embeddings()
         print(f"Embedding generation stats: {stats}")
         assert isinstance(stats, dict)
-        return True
     except Exception as e:
         print(f"Error generating embeddings: {e}")
-        return False
+        raise AssertionError("Embedding generation failed") from e
 
 if __name__ == "__main__":
-    success = test_embedding_generation()
-    print(f"Test result: {'PASS' if success else 'FAIL'}")
+    try:
+        test_embedding_generation()
+        print("Test result: PASS")
+    except AssertionError:
+        print("Test result: FAIL")
