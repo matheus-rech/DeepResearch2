@@ -42,18 +42,21 @@ def validate_openai_key() -> bool:
         return False
 
 def check_required_ports() -> List[int]:
-    """Check if required ports are available"""
+    """Check if required ports are available (i.e., not already in use)."""
     import socket
     required_ports = [8501, 8000, 5432]
     available_ports = []
     
     for port in required_ports:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("localhost", port))
-            available_ports.append(port)
-        except OSError as e:
-            logger.warning(f"Port {port} is not available: {e}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                # If a port is in use, bind() will raise an OSError.
+                s.bind(("127.0.0.1", port))
+                available_ports.append(port)
+            except OSError:
+                logger.warning(f"Port {port} is already in use and not available.")
+    
+    return available_ports
     
     return available_ports
 
