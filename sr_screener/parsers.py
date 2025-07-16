@@ -368,7 +368,11 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
             citation['doi'] = doi_match.group(1)
         
         # Extract title
-        title_match = re.search(r'TI\s*-\s*(.+?)(?=\nPG|\nLID|\nAB|\nAD|\nFAU|\nAU|\nLA|\n\w{2,4}\s*-)', full_text, re.DOTALL)
+        TITLE_PREFIX = r'TI\s*-\s*'
+        TITLE_LOOKAHEAD = r'(?=\nPG|\nLID|\nAB|\nAD|\nFAU|\nAU|\nLA|\n\w{2,4}\s*-)'
+        TITLE_PATTERN = rf'{TITLE_PREFIX}(.+?){TITLE_LOOKAHEAD}'
+        
+        title_match = re.search(TITLE_PATTERN, full_text, re.DOTALL)
         if title_match:
             citation['title'] = title_match.group(1).strip().replace('\n', ' ')
         
