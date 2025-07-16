@@ -57,8 +57,6 @@ def check_required_ports() -> List[int]:
                 logger.warning(f"Port {port} is already in use and not available.")
     
     return available_ports
-    
-    return available_ports
 
 def generate_environment_report() -> Tuple[bool, str]:
     """Generate comprehensive environment validation report"""
