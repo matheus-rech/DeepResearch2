@@ -225,14 +225,15 @@ def main(port=8001):
     """Main function to start the MCP server."""
     server = create_server()
     
-    server.add_middleware(
-        CORSMiddleware,
+    cors_middleware = CORSMiddleware(
+        app=None,  # This will be set by FastMCP
         allow_origins=["*"],  # Allow all origins in development
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"]
     )
+    server.add_middleware(cors_middleware)
     
     @server.custom_route("/health", methods=["GET"])
     async def health_endpoint(request):
