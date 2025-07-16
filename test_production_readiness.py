@@ -189,9 +189,14 @@ def test_file_structure():
     
     executable_files = ["main.py"]
     for file_path in executable_files:
-        if not os.access(file_path, os.X_OK):
-            print(f"❌ File not executable: {file_path}")
-            return False
+        if platform.system() == "Windows":
+            if not (os.path.exists(file_path) and file_path.endswith(".py")):
+                print(f"❌ File not executable or missing on Windows: {file_path}")
+                return False
+        else:
+            if not os.access(file_path, os.X_OK):
+                print(f"❌ File not executable on Unix-like system: {file_path}")
+                return False
     
     print("✅ File permissions correct")
     return True
