@@ -257,7 +257,6 @@ def check_title_similarity(screening_results: List[Dict[str, Any]]) -> List[Dict
     """
     issues = []
     
-    
     # Check for very similar titles with different decisions
     for i, result1 in enumerate(screening_results):
         for j, result2 in enumerate(screening_results[i + 1:], i + 1):

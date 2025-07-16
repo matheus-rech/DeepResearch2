@@ -91,7 +91,6 @@ Return your results as a JSON array where each citation has this structure:
 
 Focus on extracting EXACT quotes that support each PICOTT element and criterion match."""
 
-
     # Configure MCP server URL - needs to be accessible from OpenAI's servers
     # In production, this should be your deployed server URL
     if os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
