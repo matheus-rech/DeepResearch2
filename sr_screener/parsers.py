@@ -396,7 +396,7 @@ def parse_pubmed_text(file_obj) -> pd.DataFrame:
         
         # Extract MeSH terms
         mesh_terms = []
-        mesh_matches = re.findall(r'MH\s*-\s*(.+?)(?:/\*methods|\*methods|$)', full_text)
+        mesh_matches = re.findall(r'MH\s*-\s*(.+?)(?:/\*[\w\-]+|\*[\w\-]+|$)', full_text)
         for mesh in mesh_matches:
             mesh_terms.append(mesh.strip())
         citation['mesh_terms'] = mesh_terms
