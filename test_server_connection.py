@@ -1,11 +1,10 @@
-
 #!/usr/bin/env python3
+# Test script to verify MCP server connectivity
 """
 Test script to verify MCP server connectivity
 """
 import requests
 import os
-import json
 
 def test_mcp_server():
     """Test if the MCP server is accessible"""

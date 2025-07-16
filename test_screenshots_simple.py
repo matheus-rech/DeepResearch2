@@ -203,7 +203,7 @@ if __name__ == "__main__":
     # Generate report
     asyncio.run(generate_html_report())
     
-    print(f"\n✓ Screenshots captured successfully!")
+    print("\n✓ Screenshots captured successfully!")
     print(f"📁 Screenshots directory: {SCREENSHOT_DIR}")
     print(f"📄 HTML report: {SCREENSHOT_DIR}/screenshot_report.html")
     print(f"\nTo view the report, open: {SCREENSHOT_DIR.absolute()}/screenshot_report.html")
