@@ -1,33 +1,33 @@
 name: CI and AI Workflow
 
-  on:
-    push:
-      branches:
-        - unified-main
-        - 'feature/*'
-        - 'bugfix/*'
-    pull_request:
-      branches:
-        - unified-main
-    issue_comment:
-      types: [created]
-    pull_request_review_comment:
-      types: [created]
-    pull_request_review:
-      types: [submitted]
-    issues:
-      types: [opened, assigned]
+on:
+  push:
+    branches:
+      - unified-main
+      - 'feature/*'
+      - 'bugfix/*'
+  pull_request:
+    branches:
+      - unified-main
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  issues:
+    types: [opened, assigned]
 
-  concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-  jobs:
-    build-test-lint:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout source
-          uses: actions/checkout@v4
+jobs:
+  build-test-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
         - name: Cache Python dependencies
           uses: actions/cache@v3
