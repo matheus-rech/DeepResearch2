@@ -6,11 +6,11 @@ This file creates and configures an MCP server using the ``FastMCP``
 library.  The implementation is based on the upstream DeepResearch2
 ``mcp_server.py`` but includes several improvements:
 
-* Synchronous helper methods ``get_tools_sync`` and ``get_tool_sync``
-  are added to the returned server instance.  These helpers wrap the
-  underlying asynchronous methods in ``asyncio.run()`` allowing
-  consumers (such as some test scripts) to call them from a
-  synchronous context.
+* A ``SyncMCPServer`` wrapper class that provides both synchronous
+  and asynchronous access to MCP server tools. The wrapper exposes
+  ``get_tools()`` for synchronous access and ``aget_tools()`` for 
+  asynchronous access, allowing consumers (such as test scripts) to 
+  call them from both synchronous and asynchronous contexts.
 * Minor code clean‑ups and type hints for clarity.
 
 The server exposes four tools: ``search``, ``fetch``, ``health_check``
