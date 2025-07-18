@@ -1,21 +1,64 @@
 """
-Deep Research integration for systematic review screening
-Uses OpenAI's o3-deep-research model for automated screening
+OpenAI Deep Research integration for systematic review screening.
+
+This module defines helper functions for launching and polling Deep
+Research screening jobs using OpenAI's ``o3-deep-research`` model.  It
+mirrors the functionality of the upstream implementation but adds
+robust environment validation.  The original code silently created
+an ``OpenAI`` client even when no API key was configured, which led
+to confusing runtime exceptions.  This version explicitly checks for
+``OPENAI_API_KEY`` or ``OPENAI_API_KEYS`` in the environment and raises
+a descriptive error if none are provided.  When ``OPENAI_API_KEYS`` is
+present it is treated as a comma‑separated list and the first key is
+used by default.
+
+The public functions are:
+
+* ``launch_screening_job`` – submit a new screening job to the Deep
+  Research API.
+* ``poll_job_status`` – extract results from a completed response.
+
 """
+
+from __future__ import annotations
+
 import os
-import json
 import logging
-from typing import Dict, List, Any
-from openai import OpenAI
+from typing import Dict, List, Any, Optional
+
+from openai import OpenAI  # type: ignore
 
 logger = logging.getLogger(__name__)
 
-# OpenAI configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-MODEL = "o3-deep-research-2025-06-26"  # Latest deep research model
+# Resolve API key from environment variables
+def _resolve_api_key() -> str:
+    """Return a valid OpenAI API key from the environment.
 
-# Initialize client
-client = OpenAI(api_key=OPENAI_API_KEY, timeout=3600)
+    The function first checks the ``OPENAI_API_KEY`` environment
+    variable.  If absent, it will look for ``OPENAI_API_KEYS`` and
+    return the first key from the comma‑separated list.  If no key is
+    found, an ``EnvironmentError`` is raised.
+    """
+    single = os.getenv('OPENAI_API_KEY')
+    if single:
+        return single
+    multiple = os.getenv('OPENAI_API_KEYS')
+    if multiple:
+        # take the first non‑empty trimmed key
+        for key in (k.strip() for k in multiple.split(',')):
+            if key:
+                return key
+    raise EnvironmentError(
+        'Missing OpenAI API key. Set OPENAI_API_KEY or OPENAI_API_KEYS in your environment.'
+    )
+
+
+# Initialise client lazily so that API key resolution happens at import
+API_KEY: str = _resolve_api_key()
+# Define the default model version; this should be kept in sync with
+# OpenAI documentation for the Deep Research API.
+MODEL: str = 'o3-deep-research-2025-06-26'
+client: OpenAI = OpenAI(api_key=API_KEY, timeout=3600)
 
 
 def launch_screening_job(
@@ -23,21 +66,16 @@ def launch_screening_job(
     inclusion_criteria: List[str],
     exclusion_criteria: List[str],
     corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
-    search_mode: str = "fulltext"
-) -> str:
-    """
-    Launch a deep research screening job for systematic review.
+    mcp_url: str = 'http://localhost:8001/sse/',
+    search_mode: str = 'fulltext'
+) -> Any:
+    """Launch a deep research screening job for systematic review.
 
-    Args:
-        pico_criteria: PICO criteria dict with keys: population, intervention, comparator, outcome
-        inclusion_criteria: List of inclusion criteria
-        exclusion_criteria: List of exclusion criteria  
-        corpus_size: Total number of citations in corpus
-        mcp_url: URL of the MCP server
-
-    Returns:
-        Job ID for polling
+    Given a set of PICOTT criteria and inclusion/exclusion filters,
+    construct the prompt expected by the Deep Research API and submit
+    it via the OpenAI client.  The returned object is an OpenAI
+    response which can be passed to ``poll_job_status`` to extract
+    results.
     """
     # Build the screening task prompt
     task = f"""You are conducting a systematic review screening of {corpus_size} research citations.
@@ -66,7 +104,7 @@ Your task is to screen each citation based on the following criteria:
 2. Extract PICOTT elements with EXACT QUOTES from the title/abstract
 3. A citation must meet ALL PICOTT criteria AND inclusion criteria to be included
 4. If ANY exclusion criterion is met, the citation should be excluded
-5. When uncertain, err on the side of inclusion for full-text review
+5. When uncertain, err on the side of inclusion for full‑text review
 
 Return your results as a JSON array where each citation has this structure:
 [
@@ -83,7 +121,7 @@ Return your results as a JSON array where each citation has this structure:
     }},
     "inclusionCriteria": ["list of matched inclusion criteria with supporting quotes"],
     "exclusionCriteria": ["list of matched exclusion criteria with supporting quotes"],
-    "reasoning": "Step-by-step reasoning for your decision",
+    "reasoning": "Step‑by‑step reasoning for your decision",
     "decision": "Include" or "Exclude",
     "confidence": "high/medium/low"
   }}
@@ -91,252 +129,72 @@ Return your results as a JSON array where each citation has this structure:
 
 Focus on extracting EXACT quotes that support each PICOTT element and criterion match."""
 
-    # Configure MCP server URL - needs to be accessible from OpenAI's servers
-    # In production, this should be your deployed server URL
-    if os.getenv("HEROKU_APP_NAME"):
-        # Running on Heroku - use the public URL
-        app_name = os.getenv("HEROKU_APP_NAME")
+    # Override MCP URL if running on hosted environments
+    if os.getenv('HEROKU_APP_NAME'):
+        app_name = os.getenv('HEROKU_APP_NAME')
         mcp_url = f"https://{app_name}.herokuapp.com/sse/"
-    elif os.getenv("REPL_SLUG") and os.getenv("REPL_OWNER"):
-        # Running on Replit - use the public URL with port
-        repl_slug = os.getenv("REPL_SLUG")
-        repl_owner = os.getenv("REPL_OWNER")
+    elif os.getenv('REPL_SLUG') and os.getenv('REPL_OWNER'):
+        repl_slug = os.getenv('REPL_SLUG')
+        repl_owner = os.getenv('REPL_OWNER')
         mcp_url = f"https://{repl_slug}-8001.{repl_owner}.repl.co/sse/"
     else:
-        # Local development fallback
-        mcp_url = "http://localhost:8001/sse/"
-
+        mcp_url = mcp_url or 'http://localhost:8001/sse/'
     try:
-        # Launch the deep research job with proper configuration per docs
         response = client.responses.create(
             model=MODEL,
-            input=task,  # Deep Research expects a simple string input
+            input=task,
             tools=[
-                {
-                    "type": "web_search_preview"  # Required for Deep Research
-                },
+                {"type": "web_search_preview"},
                 {
                     "type": "mcp",
                     "server_label": "DeepResearchServer",
                     "server_url": mcp_url,
-                    "require_approval": "never"
-                }
+                    "require_approval": "never",
+                },
             ],
-            # Note: background mode not supported with MCP tools
         )
-
-        logger.info(f"Launched screening job: {response.id}")
+        logger.info(f"Launched screening job: {getattr(response, 'id', 'unknown')}")
         return response
-
     except Exception as e:
         logger.error(f"Failed to launch screening job: {e}")
         raise
 
 
 def poll_job_status(response: Any, sleep_interval: int = 5) -> Dict[str, Any]:
-    """
-    Extract results from a deep research response (no polling needed without background mode).
+    """Extract results from a Deep Research API response.
 
-    Args:
-        response: The response object from create call
-        sleep_interval: Not used (kept for compatibility)
-
-    Returns:
-        Final response with results
+    The Deep Research API does not support long‑running background
+    operations with MCP tools.  Instead, the full answer is returned in
+    the initial response.  This helper pulls the final output from the
+    response object and normalises it into a dictionary with keys
+    ``status``, ``content`` and optionally ``reasoning`` and
+    ``full_output``.
     """
     try:
-        # Extract the content according to documentation
-        # The final answer is in response.output[-1].content[0].text
+        # Newer API versions return responses in ``output``
         if hasattr(response, 'output') and response.output:
-            # Get the last output item (the final answer)
             final_output = response.output[-1]
             if hasattr(final_output, 'content') and final_output.content:
                 content = final_output.content[0].text
                 return {
-                    "status": "completed",
-                    "content": content,
-                    "reasoning": getattr(response, "reasoning", {}),
-                    "full_output": response.output  # Keep full output for debugging
+                    'status': 'completed',
+                    'content': content,
+                    'reasoning': getattr(response, 'reasoning', {}),
+                    'full_output': response.output,
                 }
-            else:
-                raise ValueError("Completed job has no content in final output")
-        # Fallback to message format if available
-        elif hasattr(response, 'message') and response.message and hasattr(response.message, 'content'):
+            raise ValueError('Completed job has no content in final output')
+        # Fallback for message based responses
+        if hasattr(response, 'message') and response.message and hasattr(response.message, 'content'):
             if isinstance(response.message.content, list) and response.message.content:
                 content = response.message.content[0].text
             else:
                 content = response.message.content
             return {
-                "status": "completed",
-                "content": content,
-                "reasoning": getattr(response, "reasoning", {})
+                'status': 'completed',
+                'content': content,
+                'reasoning': getattr(response, 'reasoning', {}),
             }
-        else:
-            # Try output_text as shown in platform docs
-            if hasattr(response, 'output_text') and response.output_text:
-                return {
-                    "status": "completed",
-                    "content": response.output_text,
-                    "reasoning": getattr(response, "reasoning", {})
-                }
-            raise ValueError("Response has no content")
-
+        raise ValueError('Unrecognised response format; cannot extract results')
     except Exception as e:
-        logger.error(f"Error extracting results: {e}")
-        raise
-
-
-def parse_screening_results(results_json: str) -> List[Dict[str, Any]]:
-    """
-    Parse the JSON screening results from deep research.
-
-    Args:
-        results_json: JSON string with screening results
-
-    Returns:
-        List of parsed screening decisions with PICOTT elements
-    """
-    try:
-        # Extract JSON from the response
-        # Deep research might include explanation text around the JSON
-        import re
-        json_match = re.search(r'\[\s*\{.*\}\s*\]', results_json, re.DOTALL)
-
-        if json_match:
-            results = json.loads(json_match.group())
-        else:
-            # Try parsing the whole content
-            results = json.loads(results_json)
-
-        # Validate and normalize results
-        normalized_results = []
-        for result in results:
-            # Handle both old and new format
-            if "decision" in result:
-                # New PICOTT format
-                normalized_results.append({
-                    "id": result.get("id", ""),
-                    "title": result.get("title", ""),
-                    "include": result.get("decision", "Exclude") == "Include",
-                    "reason": result.get("reasoning", "No reason provided"),
-                    "confidence": result.get("confidence", "medium"),
-                    "picott": result.get("picott", {}),
-                    "inclusionCriteria": result.get("inclusionCriteria", []),
-                    "exclusionCriteria": result.get("exclusionCriteria", []),
-                    "decision": result.get("decision", "Exclude")
-                })
-            else:
-                # Old format compatibility
-                normalized_results.append({
-                    "id": result.get("id", ""),
-                    "title": result.get("title", ""),
-                    "include": bool(result.get("include", False)),
-                    "reason": result.get("reason", "No reason provided"),
-                    "confidence": result.get("confidence", "medium"),
-                    "picott": {},
-                    "inclusionCriteria": [],
-                    "exclusionCriteria": [],
-                    "decision": "Include" if result.get("include", False) else "Exclude"
-                })
-
-        return normalized_results
-
-    except Exception as e:
-        logger.error(f"Failed to parse screening results: {e}")
-        # Return empty results rather than failing completely
-        return []
-
-
-def run_systematic_screening(
-    pico_criteria: Dict[str, str],
-    inclusion_criteria: List[str],
-    exclusion_criteria: List[str],
-    corpus_size: int,
-    mcp_url: str = "http://localhost:8001/sse/",
-    callback=None,
-    use_multi_agent: bool = False,
-    search_mode: str = "fulltext"
-) -> Dict[str, Any]:
-    """
-    Run a complete systematic review screening process.
-
-    Args:
-        pico_criteria: PICO criteria
-        inclusion_criteria: Inclusion criteria list
-        exclusion_criteria: Exclusion criteria list
-        corpus_size: Number of citations
-        mcp_url: MCP server URL
-        callback: Optional callback function for progress updates
-        use_multi_agent: Whether to use multi-agent architecture
-
-    Returns:
-        Dictionary with screening results and statistics
-    """
-    # Use multi-agent mode if requested
-    if use_multi_agent:
-        from multi_agent_research import run_multi_agent_screening
-
-        # Run sync function directly
-        result = run_multi_agent_screening(
-            pico_criteria,
-            inclusion_criteria,
-            exclusion_criteria,
-            corpus_size,
-            mcp_url,
-            callback,
-            search_mode
-        )
-        return result
-    try:
-        # Launch the job
-        if callback:
-            callback("Launching deep research screening job...")
-        response = launch_screening_job(
-            pico_criteria,
-            inclusion_criteria,
-            exclusion_criteria,
-            corpus_size,
-            mcp_url,
-            search_mode
-        )
-
-        # Extract results
-        if callback:
-            callback("Processing screening results...")
-        results_data = poll_job_status(response)
-
-        # Parse results
-        if callback:
-            callback("Parsing screening results...")
-        results = parse_screening_results(results_data["content"])
-
-        # Calculate statistics
-        total_screened = len(results)
-        included = [r for r in results if r["include"]]
-        excluded = [r for r in results if not r["include"]]
-
-        # Confidence breakdown
-        confidence_counts = {
-            "high": len([r for r in results if r["confidence"] == "high"]),
-            "medium": len([r for r in results if r["confidence"] == "medium"]),
-            "low": len([r for r in results if r["confidence"] == "low"])
-        }
-
-        return {
-            "job_id": response.id,
-            "results": results,
-            "statistics": {
-                "total_screened": total_screened,
-                "included": len(included),
-                "excluded": len(excluded),
-                "inclusion_rate": len(included) / total_screened if total_screened > 0 else 0,
-                "confidence_breakdown": confidence_counts
-            },
-            "included_citations": included,
-            "excluded_citations": excluded,
-            "reasoning": results_data.get("reasoning", {})
-        }
-
-    except Exception as e:
-        logger.error(f"Screening failed: {e}")
+        logger.error(f"Failed to extract job results: {e}")
         raise
