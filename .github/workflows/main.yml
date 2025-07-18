@@ -29,321 +29,303 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-        - name: Cache Python dependencies
-          uses: actions/cache@v3
-          with:
-            path: ~/.cache/pip
-            key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-            restore-keys: |
-              ${{ runner.os }}-pip-
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-        - name: Install Python dependencies
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install flake8 pytest pytest-cov bandit
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest pytest-cov bandit
 
-        - name: Lint Python with flake8
-          run: |
-            flake8 --exclude=.venv,node_modules,__pycache__,.git \
-                   --max-line-length=120 --ignore=E501,W503 .
+      - name: Lint Python with flake8
+        run: |
+          flake8 --exclude=.venv,node_modules,__pycache__,.git \
+                 --max-line-length=120 --ignore=E501,W503 .
 
-        - name: Run Python tests
-          run: pytest --cov=. --cov-report=xml -q
+      - name: Run Python tests
+        run: pytest --cov=. --cov-report=xml -q
 
-        - name: Security scan with Super-Linter
-          uses: github/super-linter@v4
-          env:
-            DEFAULT_BRANCH: unified-main
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            VALIDATE_ALL_CODEBASE: false
+      - name: Security scan with Super-Linter
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: unified-main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
 
-        - name: Python security scan (Bandit)
-          run: bandit -r . --exclude node_modules,.venv,__pycache__,.git
+      - name: Python security scan (Bandit)
+        run: bandit -r . --exclude node_modules,.venv,__pycache__,.git
 
-        - name: Upload coverage
-          uses: codecov/codecov-action@v3
-          with:
-            file: ./coverage.xml
-            fail_ci_if_error: false
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
 
-    auto-merge:
-      needs: build-test-lint
-      if: >
-        github.event_name == 'pull_request' &&
-        github.event.pull_request.draft == false &&
-        github.actor != 'dependabot[bot]'
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write
-        pull-requests: write
-      steps:
-        - name: Automerge pull requests with label
-          uses: pascalgn/automerge-action@v0.16.0
-          with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            merge_method: squash
-            labels: auto-merge
-            allow_rebase: false
-            allow_ff: false
+  auto-merge:
+    needs: build-test-lint
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Automerge pull requests with label
+        uses: pascalgn/automerge-action@v0.16.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: squash
+          labels: auto-merge
+          allow_rebase: false
+          allow_ff: false
 
-    claude-assistant:
-      if: >
-        github.actor != 'dependabot[bot]' &&
-        (
-          (github.event_name == 'issue_comment' && contains(github.event.comment.body, 
-  '@claude')) ||
-          (github.event_name == 'pull_request_review_comment' && 
-  contains(github.event.comment.body, '@claude')) ||
-          (github.event_name == 'pull_request_review' && contains(github.event.review.body, 
-  '@claude')) ||
-          (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
-        )
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        pull-requests: write
-        issues: write
-        id-token: write
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+  claude-assistant:
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+        (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-        - name: Prepare codebase context
-          run: |
-            git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E 
-  '\.py$' | head -50 > files_for_claude.txt
-            echo "Repository structure:" > claude_context.txt
-            tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> claude_context.txt || ls -la >>
-   claude_context.txt
+      - name: Prepare codebase context
+        run: |
+          git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E '\.py$' | head -50 > files_for_claude.txt
+          echo "Repository structure:" > claude_context.txt
+          tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> claude_context.txt || ls -la >> claude_context.txt
 
-        - name: Run Claude Code Action
-          uses: anthropics/claude-code-action@beta
-          with:
-            anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-            timeout_minutes: '60'
-            max_tokens: '8192'
+      - name: Run Claude Code Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          timeout_minutes: '60'
+          max_tokens: '8192'
 
-    gpt-assistant:
-      if: >
-        github.actor != 'dependabot[bot]' &&
-        (
-          (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gpt')) 
-  ||
-          (github.event_name == 'pull_request_review_comment' && 
-  contains(github.event.comment.body, '@gpt')) ||
-          (github.event_name == 'pull_request_review' && contains(github.event.review.body, 
-  '@gpt')) ||
-          (github.event_name == 'issues' && contains(github.event.issue.body, '@gpt'))
-        )
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        pull-requests: write
-        issues: write
-        id-token: write
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+  gpt-assistant:
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gpt')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gpt')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gpt')) ||
+        (github.event_name == 'issues' && contains(github.event.issue.body, '@gpt'))
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-        - name: Prepare codebase context
-          run: |
-            git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E 
-  '\.py$' | head -50 > files_for_gpt.txt
-            echo "Repository structure:" > gpt_context.txt
-            tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> gpt_context.txt || ls -la >> 
-  gpt_context.txt
+      - name: Prepare codebase context
+        run: |
+          git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E '\.py$' | head -50 > files_for_gpt.txt
+          echo "Repository structure:" > gpt_context.txt
+          tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> gpt_context.txt || ls -la >> gpt_context.txt
 
-        - name: Run GPT Code Review
-          uses: anc95/ChatGPT-CodeReview@main
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          with:
-            model: gpt-4
-            review_simple_changes: false
-            review_comment_lgtm: false
+      - name: Run GPT Code Review
+        uses: anc95/ChatGPT-CodeReview@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          model: gpt-4
+          review_simple_changes: false
+          review_comment_lgtm: false
 
-    copilot-assistant:
-      if: >
-        github.actor != 'dependabot[bot]' &&
-        (
-          (github.event_name == 'issue_comment' && contains(github.event.comment.body, 
-  '@copilot')) ||
-          (github.event_name == 'pull_request_review_comment' && 
-  contains(github.event.comment.body, '@copilot')) ||
-          (github.event_name == 'pull_request_review' && contains(github.event.review.body, 
-  '@copilot')) ||
-          (github.event_name == 'issues' && contains(github.event.issue.body, '@copilot'))
-        )
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        pull-requests: write
-        issues: write
-        id-token: write
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
+  copilot-assistant:
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@copilot')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@copilot')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@copilot')) ||
+        (github.event_name == 'issues' && contains(github.event.issue.body, '@copilot'))
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-        - name: Prepare codebase context
-          run: |
-            git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E 
-  '\.py$' | head -50 > files_for_copilot.txt
-            echo "Repository structure:" > copilot_context.txt
-            tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> copilot_context.txt || ls -la 
-  >> copilot_context.txt
+      - name: Prepare codebase context
+        run: |
+          git log --pretty=format: --name-only --since="2 weeks ago" | sort | uniq | grep -E '\.py$' | head -50 > files_for_copilot.txt
+          echo "Repository structure:" > copilot_context.txt
+          tree -I 'node_modules|.venv|__pycache__|.git' -L 3 >> copilot_context.txt || ls -la >> copilot_context.txt
 
-        - name: GitHub Copilot Analysis
-          run: |
-            echo "## 🤖 GitHub Copilot Analysis" > copilot_summary.md
-            echo "" >> copilot_summary.md
-            echo "### Recent Changes" >> copilot_summary.md
-            echo "\`\`\`" >> copilot_summary.md
-            cat files_for_copilot.txt >> copilot_summary.md
-            echo "\`\`\`" >> copilot_summary.md
-            echo "" >> copilot_summary.md
-            echo "### Repository Structure" >> copilot_summary.md
-            echo "\`\`\`" >> copilot_summary.md
-            cat copilot_context.txt >> copilot_summary.md
-            echo "\`\`\`" >> copilot_summary.md
+      - name: GitHub Copilot Analysis
+        run: |
+          echo "## 🤖 GitHub Copilot Analysis" > copilot_summary.md
+          echo "" >> copilot_summary.md
+          echo "### Recent Changes" >> copilot_summary.md
+          echo "\`\`\`" >> copilot_summary.md
+          cat files_for_copilot.txt >> copilot_summary.md
+          echo "\`\`\`" >> copilot_summary.md
+          echo "" >> copilot_summary.md
+          echo "### Repository Structure" >> copilot_summary.md
+          echo "\`\`\`" >> copilot_summary.md
+          cat copilot_context.txt >> copilot_summary.md
+          echo "\`\`\`" >> copilot_summary.md
 
-        - name: Comment Copilot Analysis
-          uses: actions/github-script@v7
-          with:
-            script: |
-              const fs = require('fs');
-              const summary = fs.readFileSync('copilot_summary.md', 'utf8');
+      - name: Comment Copilot Analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('copilot_summary.md', 'utf8');
 
-              if (context.eventName === 'issue_comment' || context.eventName ===
-  'pull_request_review_comment') {
-                await github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: summary
-                });
-              }
-
-    performance-test:
-      needs: build-test-lint
-      if: github.event_name == 'pull_request'
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout source
-          uses: actions/checkout@v4
-
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.11'
-
-        - name: Install dependencies
-          run: |
-            pip install -r requirements.txt
-            pip install pytest-benchmark
-
-        - name: Run performance tests
-          run: pytest --benchmark-only --benchmark-json=benchmark.json
-
-        - name: Store benchmark results
-          uses: benchmark-action/github-action-benchmark@v1
-          with:
-            tool: 'pytest'
-            output-file-path: benchmark.json
-            github-token: ${{ secrets.GITHUB_TOKEN }}
-            auto-push: true
-
-    deploy-preview:
-      needs: build-test-lint
-      if: github.event_name == 'pull_request' &&
-  contains(github.event.pull_request.labels.*.name, 'deploy-preview')
-      runs-on: ubuntu-latest
-      environment: preview
-      steps:
-        - name: Checkout source
-          uses: actions/checkout@v4
-
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.11'
-
-        - name: Install dependencies
-          run: pip install -r requirements.txt
-
-        - name: Deploy to preview environment
-          run: |
-            echo "Deploying FastMCP servers to preview..."
-            python3 -c "
-            import os
-            pr_number = '${{ github.event.number }}'
-            print(f'Preview deployment for PR #{pr_number}')
-            print('FastMCP servers deployed successfully')
-            "
-
-        - name: Comment preview URL
-          uses: actions/github-script@v7
-          with:
-            script: |
-              github.rest.issues.createComment({
+            if (context.eventName === 'issue_comment' || context.eventName === 'pull_request_review_comment') {
+              await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: '🚀 Preview deployed! Test your FastMCP servers at: https://preview-${{ 
-  github.event.number }}.example.com'
-              })
+                body: summary
+              });
+            }
 
-    deploy-production:
-      needs: auto-merge
-      if: github.ref == 'refs/heads/unified-main' && github.event_name == 'push'
-      runs-on: ubuntu-latest
-      environment: production
-      steps:
-        - name: Checkout source
-          uses: actions/checkout@v4
+  performance-test:
+    needs: build-test-lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-        - name: Install dependencies
-          run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-benchmark
 
-        - name: Deploy to production
-          run: |
-            echo "Deploying to production..."
-            python3 -c "
-            print('Production deployment initiated')
-            print('FastMCP tool builders deployed')
-            print('All systems operational')
-            "
+      - name: Run performance tests
+        run: pytest --benchmark-only --benchmark-json=benchmark.json
 
-        - name: Health check
-          run: |
-            echo "Production health check passed"
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: benchmark.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
 
-        - name: Notify deployment success
-          uses: actions/github-script@v7
-          with:
-            script: |
-              github.rest.repos.createCommitStatus({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                sha: context.sha,
-                state: 'success',
-                description: 'Production deployment successful',
-                context: 'deployment/production'
-              })
+  deploy-preview:
+    needs: build-test-lint
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy-preview')
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Deploy to preview environment
+        run: |
+          echo "Deploying FastMCP servers to preview..."
+          python3 -c "
+          import os
+          pr_number = '${{ github.event.number }}'
+          print(f'Preview deployment for PR #{pr_number}')
+          print('FastMCP servers deployed successfully')
+          "
+
+      - name: Comment preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployed! Test your FastMCP servers at: https://preview-${{ github.event.number }}.example.com'
+            })
+
+  deploy-production:
+    needs: auto-merge
+    if: github.ref == 'refs/heads/unified-main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production..."
+          python3 -c "
+          print('Production deployment initiated')
+          print('FastMCP tool builders deployed')
+          print('All systems operational')
+          "
+
+      - name: Health check
+        run: |
+          echo "Production health check passed"
+
+      - name: Notify deployment success
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              description: 'Production deployment successful',
+              context: 'deployment/production'
+            })
