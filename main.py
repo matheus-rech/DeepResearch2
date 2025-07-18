@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 from typing import Dict, List, Any
+import asyncio
 
 from fastmcp import FastMCP
 from openai import OpenAI
@@ -23,6 +24,25 @@ from openai import OpenAI
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class SyncMCPServer:
+    """Wrapper class that provides both synchronous and asynchronous access to FastMCP server tools."""
+    
+    def __init__(self, mcp: FastMCP):
+        self._mcp = mcp
+
+    async def aget_tools(self):
+        """Asynchronous access to tools."""
+        return await self._mcp.get_tools()
+
+    def get_tools(self):
+        """Provide synchronous access for scripts/tests."""
+        return asyncio.run(self._mcp.get_tools())
+
+    def __getattr__(self, name):
+        """Delegate all other attribute access to the underlying FastMCP instance."""
+        return getattr(self._mcp, name)
 
 # OpenAI configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -206,7 +226,7 @@ def create_server():
         logger.info(f"Fetched vector store file: {id}")
         return result
 
-    return mcp
+    return SyncMCPServer(mcp)
 
 
 def run_vector_store_mode():
@@ -223,13 +243,13 @@ def run_vector_store_mode():
     # Create the MCP server
     server = create_server()
     
-    @server.custom_route("/health", methods=["GET"])
+    @server._mcp.custom_route("/health", methods=["GET"])
     async def health_endpoint(request):
         """HTTP health check endpoint for production monitoring"""
         from starlette.responses import JSONResponse
         import time
         try:
-            tools = await server.get_tools()
+            tools = await server._mcp.get_tools()
             return JSONResponse({
                 "status": "healthy",
                 "server": "VectorStoreMCPServer",
@@ -252,7 +272,7 @@ def run_vector_store_mode():
 
     try:
         # Use FastMCP's built-in run method with SSE transport
-        server.run(transport="sse", host="0.0.0.0", port=8001)
+        server._mcp.run(transport="sse", host="0.0.0.0", port=8001)
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
