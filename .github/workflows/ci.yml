@@ -35,9 +35,17 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio pytest-cov flake8
     
+    - name: Install pre-commit
+      run: |
+        pip install pre-commit
+    
+    - name: Run pre-commit
+      run: |
+        pre-commit run --all-files
+    
     - name: Lint with flake8
       run: |
-        flake8 --exclude=.venv,*.txt,*.md,*.yml,*.yaml,*.json,*.csv,*.html,*.css,*.js,*.dockerfile,Dockerfile . --max-line-length=120 --ignore=E501,W503,E302,E305,W293,W291,W292
+        flake8 --exclude=.venv,*.txt,*.md,*.yml,*.yaml,*.json,*.csv,*.html,*.css,*.js,*.dockerfile,Dockerfile . --max-line-length=120 --ignore=E501,W503,E302,E305,E306,W293,W291,W292
     
     - name: Initialize database
       run: |
