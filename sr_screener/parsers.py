@@ -339,11 +339,12 @@ def detect_format(filename: str, content: bytes) -> str:
         return 'pubmed_nbib'
     if filename_lower.endswith('.xml'):
         content_str = content.decode('utf-8', errors='ignore')
-        lower = content_str.lower()
-        # Distinguish between PubMed and EndNote XML by tag
-        if '<pubmedarticle' in lower:
+        # Distinguish between PubMed and EndNote XML by specific tags
+        # Use case-insensitive matching for robustness with various XML exports
+        content_lower = content_str.lower()
+        if '<pubmedarticle' in content_lower:
             return 'pubmed_xml'
-        if '<record' in lower or '<records' in lower:
+        if '<record' in content_lower or '<records' in content_lower:
             return 'endnote_xml'
         return 'unknown_xml'
     if filename_lower.endswith('.txt'):
@@ -353,16 +354,18 @@ def detect_format(filename: str, content: bytes) -> str:
             return 'pubmed_text'
     # Fallback based on content regardless of extension
     try:
-        snippet = content.decode('utf-8', errors='ignore')[:2000].lower()
-        if 'ty  -' in snippet:
+        snippet = content.decode('utf-8', errors='ignore')[:2000]
+        snippet_lower = snippet.lower()
+        if 'ty  -' in snippet_lower:
             return 'ris'
-        if '<pubmedarticle' in snippet:
+        # XML detection for files without .xml extension
+        if '<pubmedarticle' in snippet_lower:
             return 'pubmed_xml'
-        if '<record' in snippet or '<records' in snippet:
+        if '<record' in snippet_lower or '<records' in snippet_lower:
             return 'endnote_xml'
-        if snippet.startswith('pmid-') or 'pmid:' in snippet:
+        if snippet.startswith('PMID-') or 'PMID:' in snippet:
             return 'pubmed_text'
-        if 'doi:' in snippet:
+        if 'DOI:' in snippet:
             return 'pubmed_text'
     except Exception:
         pass
