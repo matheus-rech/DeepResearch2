@@ -6,11 +6,11 @@ This file creates and configures an MCP server using the ``FastMCP``
 library.  The implementation is based on the upstream DeepResearch2
 ``mcp_server.py`` but includes several improvements:
 
-* Synchronous helper methods ``get_tools_sync`` and ``get_tool_sync``
-  are added to the returned server instance.  These helpers wrap the
-  underlying asynchronous methods in ``asyncio.run()`` allowing
-  consumers (such as some test scripts) to call them from a
-  synchronous context.
+* A ``SyncMCPServer`` wrapper class that provides both synchronous
+  and asynchronous access to MCP server tools. The wrapper exposes
+  ``get_tools()`` for synchronous access and ``aget_tools()`` for 
+  asynchronous access, allowing consumers (such as test scripts) to 
+  call them from both synchronous and asynchronous contexts.
 * Minor code clean‑ups and type hints for clarity.
 
 The server exposes four tools: ``search``, ``fetch``, ``health_check``
@@ -33,6 +33,26 @@ import database as db  # type: ignore
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+class SyncMCPServer:
+    """Wrapper class that provides both synchronous and asynchronous access to FastMCP server tools."""
+    
+    def __init__(self, mcp: FastMCP):
+        self._mcp = mcp
+
+    async def aget_tools(self):
+        """Asynchronous access to tools."""
+        return await self._mcp.get_tools()
+
+    def get_tools(self):
+        """Provide synchronous access for scripts/tests."""
+        return asyncio.run(self._mcp.get_tools())
+
+    def __getattr__(self, name):
+        """Delegate all other attribute access to the underlying FastMCP instance."""
+        return getattr(self._mcp, name)
+
+
 # Server instructions shown to the language model
 server_instructions: str = """
 This MCP server provides search and document retrieval capabilities for systematic review screening.
@@ -46,7 +66,7 @@ The corpus consists of academic citations from medical and scientific literature
 """
 
 
-def create_server() -> FastMCP:
+def create_server() -> SyncMCPServer:
     """Create and configure the MCP server with search and fetch tools."""
     # Initialise the database
     db.init_db()
@@ -162,29 +182,17 @@ def create_server() -> FastMCP:
             logger.error(f"Corpus info error: {e}")
             return {'error': str(e), 'total_citations': 0}
 
-    # Attach synchronous helper methods to allow usage in non‑async contexts
-    def get_tools_sync() -> Any:
-        return asyncio.run(mcp.get_tools())
-
-    def get_tool_sync(name: str) -> Any:
-        async def _inner():
-            return await mcp.get_tool(name)
-        return asyncio.run(_inner())
-    # Bind helpers to the mcp instance
-    setattr(mcp, 'get_tools_sync', get_tools_sync)
-    setattr(mcp, 'get_tool_sync', get_tool_sync)
-
-    return mcp
+    return SyncMCPServer(mcp)
 
 
 def main(port: int = 8001) -> None:
     """Entry point to start the MCP server."""
     server = create_server()
-    @server.custom_route('/health', methods=['GET'])  # type: ignore
+    @server._mcp.custom_route('/health', methods=['GET'])  # type: ignore
     async def health_endpoint(request):  # type: ignore
         from starlette.responses import JSONResponse  # type: ignore
         try:
-            tools = await server.get_tools()
+            tools = await server._mcp.get_tools()
             return JSONResponse({
                 'status': 'healthy',
                 'server': 'DeepResearchServer',
@@ -206,7 +214,7 @@ def main(port: int = 8001) -> None:
         f"External URL: https://{os.getenv('REPL_SLUG', 'unknown')}-{port}.{os.getenv('REPL_OWNER', 'unknown')}.repl.co/sse/"
     )
     # Start server with SSE transport
-    server.run(transport='sse', host='0.0.0.0', port=port)
+    server._mcp.run(transport='sse', host='0.0.0.0', port=port)
 
 
 if __name__ == '__main__':
