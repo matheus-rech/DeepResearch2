@@ -106,19 +106,19 @@ def wait_for_multiple_servers(servers: list, timeout: int = 60) -> bool:
 if __name__ == "__main__":
     # Example usage
     logging.basicConfig(level=logging.INFO)
-    
+
     # Test single server
     if wait_for_streamlit():
         print("✅ Streamlit server is ready")
     else:
         print("❌ Streamlit server failed to start")
-    
+
     # Test multiple servers
     servers = [
         ("http://localhost:8000", "Streamlit UI"),
         ("http://localhost:8001/health", "MCP Server")
     ]
-    
+
     if wait_for_multiple_servers(servers):
         print("✅ All servers are ready")
     else:
